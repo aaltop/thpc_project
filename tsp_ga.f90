@@ -33,13 +33,12 @@ program tsp_ga
 
     allocate(random_val(num_cities))
     allocate(weights(num_cities))
-    weights = 1.0
-    weights(1) = 10.0
-    weights = weights/sum(weights)
+    weights = 0.0
+    weights(1) = 1.0
 
     allocate(idx(num_cities))
     call sample(distances(1:num_cities,1), weights, idx)
-    print *, idx(1:5)
+    print *, idx
 
     ! allocate(idx(5))
     ! call merge_argsort(distances(1:5, 1), idx)
@@ -48,6 +47,8 @@ program tsp_ga
     
 
     contains
+
+
 
     ! sample <num_to_pick> values for <values> randomly, emphasise
     ! picking based on <weights> which should correspond to <values>.
@@ -62,19 +63,44 @@ program tsp_ga
 
         integer(kind=int_kind), intent(out) :: idx(size(values))
 
-        real(kind=real_kind) :: random_val(size(values)), &
-            keys(size(values))
+        real(kind=real_kind) :: random_val(size(values))
+        integer(kind=int_kind) :: i, idx_nonzero(size(values)), nonzero_weights, &
+            idx_zero(size(values)), zero_weights, n
 
+        n = size(values)
 
+        ! find the weights' indices that are non-zero and zero.
+        ! (Would probably be more sensible to just not allow non-positive
+        ! weights.)
+        ! -------------------------------------
+        nonzero_weights = 0
+        zero_weights = 0
+        do i = 1, n
+            
+            if (0 /= weights(i)) then
+                idx_nonzero(nonzero_weights+1) = i
+                nonzero_weights = nonzero_weights + 1
+            else
+                idx_zero(zero_weights+1) = i
+                zero_weights = zero_weights + 1
+            end if
+                
+        end do
+        ! =============================================
+
+        ! sample based on okay weights
         call random_number(random_val)
-        ! values in weights could be zero, but at least my compiler
-        ! does allow this by using infinities, and frankly, I'm fine
-        ! with that: it results ultimately in the correct behaviour,
-        ! and having to bypass the division by zero just to end
-        ! up in the same (correct) behaviour seems stupid. Just sort your
-        ! compilers out or use a more sensible language.
-        keys = 1/weights*log(random_val)
-        call merge_argsort(keys, idx)
+        call merge_argsort( &
+        1/weights(idx_nonzero(1:nonzero_weights))*log(random_val(1:nonzero_weights)), & ! see Weighted Random Sampling (2005; Efraimidis, Spirakis)
+        idx(1:nonzero_weights) &
+        )
+
+        ! sample based on zero weights (uniform sample for all zero weights)
+        call merge_argsort(random_val(nonzero_weights+1:n), idx(nonzero_weights+1:n))
+        ! actually sort zero indices based on the sample order
+        do i = 0, zero_weights-1
+            idx(n-i) = idx_zero(idx(n-i))
+        end do
 
 
 
@@ -87,12 +113,12 @@ program tsp_ga
         implicit none
 
         real(kind=real_kind), intent(in), dimension(:) :: r
-        integer, intent(out), dimension(size(r)) :: d
+        integer(kind=int_kind), intent(out), dimension(size(r)) :: d
       
-        integer, dimension(size(r)) :: il
+        integer(kind=int_kind), dimension(size(r)) :: il
 
-        integer :: stepsize
-        integer :: i,j,n,left,k,ksize
+        integer(kind=int_kind) :: stepsize
+        integer(kind=int_kind) :: i,j,n,left,k,ksize
       
         n = size(r)
       
