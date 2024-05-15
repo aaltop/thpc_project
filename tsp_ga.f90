@@ -4,11 +4,11 @@ program tsp_ga
     integer, parameter :: real_kind=8
     integer, parameter :: int_kind=4
 
-    integer :: io, i, iostat, num_cities
-    integer, allocatable :: idx(:)
+    integer :: io, i, iostat, num_cities, num_considered
+    integer, allocatable :: idx(:), routes(:,:)
 
-    real(kind=real_kind), allocatable :: random_val(:), weights(:)
-    real(kind=real_kind), allocatable :: distances(:,:)
+    real(kind=real_kind), allocatable :: random_val(:), weights(:), &
+        distances(:,:)
 
     ! read in the array of distances form a file
     !
@@ -37,8 +37,23 @@ program tsp_ga
     weights(1) = 1.0
 
     allocate(idx(num_cities))
-    call sample(distances(1:num_cities,1), weights, idx)
-    print *, idx
+    call shuffle(weights, idx)
+
+    num_considered = 10
+
+    allocate(routes(11, num_considered))
+    do i = 1, 10000000
+        call new_route(routes(:, 1))
+        call calculate_total_distance(routes(:,1), distances, random_val(2))
+        if (1 == i) then
+            random_val(1) = random_val(2)
+        else
+            if (random_val(1) > random_val(2)) random_val(1) = random_val(2)
+        end if
+
+    end do
+
+    print *, random_val(1)
 
     ! allocate(idx(5))
     ! call merge_argsort(distances(1:5, 1), idx)
@@ -48,26 +63,82 @@ program tsp_ga
 
     contains
 
+    ! subroutine breed(route1, route2, child)
+    !     implicit none
+
+    !     integer(kind=int_kind), intent(in) :: route1(:), route2(size(route1))
+    !     integer(kind=int_kind), intent(out) :: child(size(route1))
+
+    !     integer(kind=int_kind) :: not_added(size(route1)), n, i
+
+    !     n = size(route1)
+
+    !     do i = 1, n
+    !         not_added(i) = i
+    !     end do
 
 
-    ! sample <num_to_pick> values for <values> randomly, emphasise
-    ! picking based on <weights> which should correspond to <values>.
-    ! Return indices corresponding to <values>.
+
+    ! end subroutine breed
+
+
+    ! calculate the round-trip distance of <route>, where the elements
+    ! of <route> match the indices of <distances>, and the element
+    ! distances(i,j) contains the distance between city "i" and city "j".
     !
-    ! Based on Weighted Random Sampling (2005; Efraimidis, Spirakis)
-    subroutine sample(values, weights, idx)
+    ! Return distance in <dist>.
+    subroutine calculate_total_distance(route, distances, dist)
         implicit none
 
-        real(kind=real_kind), intent(in), dimension(:) :: values
-        real(kind=real_kind), intent(in), dimension(size(values)) :: weights
+        integer(kind=int_kind), intent(in) :: route(:)
+        real(kind=real_kind), intent(in) :: distances(:,:)
+        real(kind=real_kind), intent(out) :: dist
 
-        integer(kind=int_kind), intent(out) :: idx(size(values))
+        integer(kind=int_kind) :: n, i
 
-        real(kind=real_kind) :: random_val(size(values))
-        integer(kind=int_kind) :: i, idx_nonzero(size(values)), nonzero_weights, &
-            idx_zero(size(values)), zero_weights, n
+        n = size(route)
 
-        n = size(values)
+        dist = 0.0
+        do i = 1, n
+            dist = dist + distances(route(i),route(modulo(i,n)+1))
+        end do
+
+    end subroutine calculate_total_distance
+
+
+    ! Returns a new route in <route>. Because the order does not
+    ! matter for the cities, the city "1" is always first.
+    subroutine new_route(route)
+        implicit none
+        integer(kind=int_kind), intent(inout) :: route(:)
+
+        integer(kind=int_kind) :: num_cities
+        real(kind=real_kind) :: weights(size(route)-1)
+
+        num_cities = size(route)
+
+        route = 0
+        weights = 1.0
+        ! this basically means that city "1" is always first
+        call shuffle(weights, route(2:num_cities))
+        route = route + 1
+
+    end subroutine new_route
+
+    ! Get shuffled indices, emphasise picking based on <weights>.
+    ! Return shuffled indices <idx> corresponding to <weights>.
+    subroutine shuffle(weights, idx)
+        implicit none
+
+        real(kind=real_kind), intent(in), dimension(:) :: weights
+
+        integer(kind=int_kind), intent(out) :: idx(size(weights))
+
+        real(kind=real_kind) :: random_val(size(weights))
+        integer(kind=int_kind) :: i, idx_nonzero(size(weights)), nonzero_weights, &
+            idx_zero(size(weights)), zero_weights, n
+
+        n = size(weights)
 
         ! find the weights' indices that are non-zero and zero.
         ! (Would probably be more sensible to just not allow non-positive
@@ -105,7 +176,7 @@ program tsp_ga
 
 
 
-    end subroutine sample
+    end subroutine shuffle
 
     ! from https://github.com/Astrokiwi/simple_fortran_argsort
     ! sorts in descending order
