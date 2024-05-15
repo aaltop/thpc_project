@@ -42,18 +42,17 @@ program tsp_ga
     num_considered = 10
 
     allocate(routes(11, num_considered))
-    do i = 1, 10000000
+    do i = 1, 100
         call new_route(routes(:, 1))
-        call calculate_total_distance(routes(:,1), distances, random_val(2))
-        if (1 == i) then
-            random_val(1) = random_val(2)
-        else
-            if (random_val(1) > random_val(2)) random_val(1) = random_val(2)
-        end if
+        call new_route(routes(:, 2))
+        call breed(routes(:,1), routes(:,2), distances, routes(:,3))
+
+        call calculate_total_distance(routes(:,1), distances, random_val(1))
+        call calculate_total_distance(routes(:,2), distances, random_val(2))
+        call calculate_total_distance(routes(:,3), distances, random_val(3))
+        print "(3f5.0)", random_val(1:3)
 
     end do
-
-    print *, random_val(1)
 
     ! allocate(idx(5))
     ! call merge_argsort(distances(1:5, 1), idx)
@@ -63,23 +62,57 @@ program tsp_ga
 
     contains
 
-    ! subroutine breed(route1, route2, child)
-    !     implicit none
+    ! Breed <route1> and <route2> to create a new route <child>.
+    ! <distances> contain distances between cities, with distances(i,j)
+    ! being the distance being city "i" and city "j".
+    subroutine breed(route1, route2, distances, child)
+        implicit none
 
-    !     integer(kind=int_kind), intent(in) :: route1(:), route2(size(route1))
-    !     integer(kind=int_kind), intent(out) :: child(size(route1))
+        integer(kind=int_kind), intent(in) :: route1(:), route2(size(route1))
+        integer(kind=int_kind), intent(out) :: child(size(route1))
+        real(kind=real_kind), intent(in) :: distances(:,:)
 
-    !     integer(kind=int_kind) :: not_added(size(route1)), n, i
+        integer(kind=int_kind) :: not_added(size(route1)-1), n, i, idx
+        real(kind=real_kind) :: random_val
 
-    !     n = size(route1)
+        n = size(route1)
 
-    !     do i = 1, n
-    !         not_added(i) = i
-    !     end do
+        child = 0
+        child(1) = 1
+        do i = 2, n
+            not_added(i-1) = i
+        end do
+        
+        do i = 2, n
 
+            ! add a new city on from the parents based on which parents'
+            ! city is closer to the current last child city.
+            if ( distances(child(i-1), route1(i)) < distances(child(i-1), route2(i)) ) then
+                if ( .not. any(child == route1(i)) ) then
+                    child(i) = route1(i)
+                    cycle
+                end if
+            else if ( .not. any(child == route2(i)) ) then
+                child(i) = route2(i)
+                cycle
+            end if
 
+            ! if a suitable candidate is not found in either parent,
+            ! randomly sample from the values that have not been added
+            ! yet
+            call random_number(random_val)
+            idx = ceiling(random_val*(n+1-i))
+            child(i) = not_added(idx)
+            ! no need to move things around if the sampled value was
+            ! the last in the not_added array
+            if ( idx == n+1-i) cycle
 
-    ! end subroutine breed
+            ! if the sampled value was not last, move all the ones
+            ! that come after it one space to the "left"
+            not_added(idx:n-i) = not_added(idx+1:n+1-i)
+
+        end do
+    end subroutine breed
 
 
     ! calculate the round-trip distance of <route>, where the elements
