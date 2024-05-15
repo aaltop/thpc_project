@@ -41,14 +41,14 @@ program tsp_ga
 
     num_considered = 10
 
-    allocate(routes(6, num_considered))
-    do i = 1, 100
+    allocate(routes(11, num_considered))
+    do i = 1, 10
         call new_route(routes(:, 1))
         call new_route(routes(:, 2))
         call breed(routes(:,1), routes(:,2), distances, routes(:,3))
-        print "(6i2)", routes(:,3)
+        print "(11i4)", routes(:,3)
         call mutate(routes(:,3))
-        print "(6i2)", routes(:,3)
+        print "(11i4)", routes(:,3)
 
         call calculate_total_distance(routes(:,1), distances, random_val(1))
         call calculate_total_distance(routes(:,2), distances, random_val(2))
@@ -95,7 +95,7 @@ program tsp_ga
         integer(kind=int_kind), intent(out) :: child(size(route1))
         real(kind=real_kind), intent(in) :: distances(:,:)
 
-        integer(kind=int_kind) :: not_added(size(route1)-1), n, i, idx
+        integer(kind=int_kind) :: not_added(size(route1)-1), n, i, idx(1)
         real(kind=real_kind) :: random_val
 
         n = size(route1)
@@ -107,6 +107,24 @@ program tsp_ga
         end do
         
         do i = 2, n
+
+
+            ! keep track of cities not yet added
+            if ( 2 < i ) then
+
+                idx = findloc(not_added, child(i-1))
+
+                if ( idx(1) == n+2-i) then
+                    ! no need to move things around if the previously added value was
+                    ! the last in the not_added array
+                    continue
+                else
+                    ! if the added value was not last, move all the ones
+                    ! that come after it one space to the "left"
+                    not_added(idx(1):n+1-i) = not_added(idx(1)+1:n+2-i)
+                end if
+                
+            end if
 
             ! add a new city on from the parents based on which parents'
             ! city is closer to the current last child city.
@@ -124,15 +142,8 @@ program tsp_ga
             ! randomly sample from the values that have not been added
             ! yet
             call random_number(random_val)
-            idx = ceiling(random_val*(n+1-i))
-            child(i) = not_added(idx)
-            ! no need to move things around if the sampled value was
-            ! the last in the not_added array
-            if ( idx == n+1-i) cycle
-
-            ! if the sampled value was not last, move all the ones
-            ! that come after it one space to the "left"
-            not_added(idx:n-i) = not_added(idx+1:n+1-i)
+            idx(1) = ceiling(random_val*(n+1-i))
+            child(i) = not_added(idx(1))
 
         end do
     end subroutine breed
