@@ -201,18 +201,38 @@ def main():
     to_consider = 11
     distances = dat[:to_consider, :to_consider]
     rng = np.random.default_rng()
+    
 
     gens = 1000
     num_bred = 15
-    best_in_gen = find_optimal_route(distances, 10, num_bred, 1/num_bred, gens, rng)
+    best_in_gen = find_optimal_route(distances, 10, num_bred, 0.95, gens, rng)
+    
+
     best_distances = [calculate_total_distance(route, distances) for route in best_in_gen]
-    random_distances = random_search(to_consider, distances, gens, rng)
-    random_breed_distances = random_breed(to_consider, distances, gens, rng)
-    random_breed_better_distances = random_breed_better(to_consider, distances, gens, rng)
+    print(np.argmax(best_distances), max(best_distances))
     plt.plot(np.sort(best_distances), label="Breeding")
+
+    random_distances = random_search(to_consider, distances, gens, rng)
     plt.plot(np.sort(random_distances), label="Random")
+
+    random_breed_distances = random_breed(to_consider, distances, gens, rng)
     plt.plot(np.sort(random_breed_distances), label="Random Breed")
+
+    random_breed_better_distances = random_breed_better(to_consider, distances, gens, rng)
     plt.plot(np.sort(random_breed_better_distances), label="Random Breed Better")
+
+
+    fortran_random = np.loadtxt("random_search.txt")
+    fortran_random_breed = np.loadtxt("random_breed.txt")
+    fortran_random_breed_better = np.loadtxt("random_breed_better.txt")
+    fortran_breed = np.loadtxt("breed.txt")
+
+    plt.plot(np.sort(fortran_random), label="Fortran Random", linestyle="--")
+    plt.plot(np.sort(fortran_random_breed), label="Fortran Random Breed", linestyle="--")
+    plt.plot(np.sort(fortran_breed), label="Fortran Breeding", linestyle="--")
+    plt.plot(np.sort(fortran_random_breed_better), label="Fortran Random Breed Better", linestyle="--")
+
+
     plt.legend()
     plt.show()
 
