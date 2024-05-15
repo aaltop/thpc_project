@@ -58,7 +58,7 @@ def mutate(route, rng):
 
 def calculate_fitness(candidate_distances):
 
-    one_minus_max = 1 - candidate_distances/candidate_distances.max()
+    one_minus_max = 1 - candidate_distances/(candidate_distances.max()+1)
     return one_minus_max/one_minus_max.sum()
 
 def cull(fitness, num_survivors, rng):
@@ -89,8 +89,6 @@ def find_optimal_route(distances, num_routes, num_bred, mutation_chance, generat
     routes, fitness = create_candidates(num_routes, num_locs, distances, rng)
 
     for gen in range(generations):
-        have_not_bred = np.ones([len(routes)]*2,dtype=bool)
-        have_not_bred[np.arange(len(routes)),np.arange(len(routes))] = False
 
         # pick partners in advance
         partners = -np.ones((2, num_routes**2), dtype=int)
@@ -122,7 +120,7 @@ def find_optimal_route(distances, num_routes, num_bred, mutation_chance, generat
             route1 = routes[i1]
             route2 = routes[i2]
             children[b] = breed(route1, route2, distances, rng)
-            if mutation_chance < rng.random():
+            if rng.random() < mutation_chance:
                 mutate(children[b], rng)
 
         # choose new generation from among the children based on fitness
@@ -156,11 +154,6 @@ def random_breed_better(to_consider, distances, gens, rng):
     best_distances = np.ones(gens)
     best_routes = [None]*gens
     for i in range(gens):
-
-        # if i == 0:
-        #     route1 = new_route(to_consider, rng)
-        # else:
-        #     route1 = best_routes[np.argmin(distances)]
 
         route1 = new_route(to_consider, rng)
 
