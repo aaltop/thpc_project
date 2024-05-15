@@ -41,11 +41,14 @@ program tsp_ga
 
     num_considered = 10
 
-    allocate(routes(11, num_considered))
+    allocate(routes(6, num_considered))
     do i = 1, 100
         call new_route(routes(:, 1))
         call new_route(routes(:, 2))
         call breed(routes(:,1), routes(:,2), distances, routes(:,3))
+        print "(6i2)", routes(:,3)
+        call mutate(routes(:,3))
+        print "(6i2)", routes(:,3)
 
         call calculate_total_distance(routes(:,1), distances, random_val(1))
         call calculate_total_distance(routes(:,2), distances, random_val(2))
@@ -61,6 +64,26 @@ program tsp_ga
     
 
     contains
+
+    subroutine mutate(route)
+        implicit none
+
+        integer(kind=int_kind), intent(inout) :: route(:)
+
+        integer(kind=int_kind) :: idx(size(route)-1)
+        real(kind=real_kind) :: weights(size(route)-1)
+
+        if ( 1 == size(route) .or. 2 == size(route) .or. 3 == size(route) ) return
+
+        weights = 1.0
+        call shuffle(weights, idx)
+        ! always keep one (1) as first element
+        idx = idx + 1
+        idx(3) = route(idx(1))
+        route(idx(1)) = route(idx(2))
+        route(idx(2)) = idx(3)
+
+    end subroutine
 
     ! Breed <route1> and <route2> to create a new route <child>.
     ! <distances> contain distances between cities, with distances(i,j)
