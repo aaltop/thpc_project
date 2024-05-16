@@ -1,6 +1,6 @@
 compiler = gfortran
 
-modules = globals.f90 tsp.f90
+modules = globals.f90 utils.f90 tsp.f90
 mod_files = $(modules:.f90=.mod)
 mod_objects = $(modules:.f90=.o)
 
@@ -10,7 +10,7 @@ program_objects = $(programs:.f90=.o)
 objects = $(mod_objects) $(program_objects)
 
 prog = $(programs:.f90= )
-to_clean := $(prog)
+to_clean := $(prog) $(objects) $(mod_files)
 
 
 
@@ -21,7 +21,7 @@ all: $(prog)
 run_serial: tsp_ga
 	./tsp_ga
 
-tsp_ga: tsp_ga.o $(mod_objects)
+tsp_ga: $(mod_objects) tsp_ga.o
 	-$(compiler) -O2 $? -o $@
 
 $(program_objects): %.o: %.f90
