@@ -10,7 +10,7 @@ all: $(prog)
 
 .PHONY: run
 run: $(prog)
-	./run_script.sh
+	./$(prog)
 
 $(prog): %: %.f90
 	-$(compiler) -O2 $< -o $@
