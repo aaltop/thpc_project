@@ -5,17 +5,20 @@ program tsp_ga
     use tsp
     implicit none
 
-    integer :: io, i, iostat, num_cities, num_considered, generations
+    integer :: io, i, iostat, num_cities, num_considered, generations, &
+        t0, t1, clock_rate
     integer, allocatable :: idx(:), routes(:,:)
 
     real(kind=real_kind), allocatable :: random_val(:), weights(:), &
         distances(:,:)
 
+    character(len=80) :: file_name
+
     ! MPI variables
     ! ------------------------------------
     integer, parameter :: tag = 50
 
-    integer :: id, ntasks, source_id, dest_id, rc, nlen, left_neighbor, right_neighbor
+    integer :: id, ntasks, source_id, dest_id, rc, nlen, mpi_neighbor
 
     real(real_kind), allocatable :: real_recv(:), real_send(:)
 
@@ -50,6 +53,7 @@ program tsp_ga
     ! ======================================
 
     if ( 0 == id ) print "(a,i3)", "the number of tasks is", ntasks
+    call system_clock(t0, clock_rate)
     ! read in the array of distances form a file
     !
     ! the file should be formatted such that the first line contains
@@ -73,8 +77,8 @@ program tsp_ga
     close(io)
     ! ====================================================================
 
-    num_cities = 11
-    generations = 1000
+    num_cities = 15
+    generations = 10000
 
     ! allocate(random_val(num_cities))
     allocate(weights(generations))
@@ -85,60 +89,128 @@ program tsp_ga
 
     allocate(routes(num_cities, generations))
 
-    call find_optimal_route(distances(1:num_cities, 1:num_cities), 10, 15, real(0.95, real_kind), generations, routes)
+    call parallel_find_optimal_route(distances(1:num_cities, 1:num_cities), 10, 15, real(0.95, real_kind), generations, routes)
+    call system_clock(t1)
+    print '(a,x,g0,x,g16.8,a)', 'Wall clock time for process', id, real(t1-t0,real_kind)/clock_rate, ' seconds'
 
-
-    ! Calculate the distances gained from the breeding algorithm
-    io = 1234
-    open(io, file="breed.txt", status="replace", action="write")
+    write(file_name,"(g0)") id
+    file_name = "parallel_breed" // trim(file_name) // ".txt"
+    
+    io = 1234 + id
+    open(io, file=file_name, status="replace", action="write")
     do i = 1, generations
         
-        ! print "(11i3)", routes(:,i)
         call calculate_total_distance(routes(:,i), distances, weights(i))
         write(io, *) weights(i)
 
     end do
     close(io)
 
-    ! Do a random search
-    io = 1234
-    open(io, file="random_search.txt", status="replace", action="write")
-    do i = 1, generations
-        call new_route(routes(:,1))
-        call calculate_total_distance(routes(:,1), distances, weights(1))
-        write(io, *) weights(1)
-    end do
-    close(io)
-
-    ! Do a "random breed", whereby two random routes are bred
-    ! and the child is the new tested route
-    io = 1234
-    open(io, file="random_breed.txt", status="replace", action="write")
-    do i = 1, generations
-        call new_route(routes(:,1))
-        call new_route(routes(:,2))
-        call breed(routes(:,1), routes(:,2), distances(1:num_cities, 1:num_cities), routes(:,3))
-        call calculate_total_distance(routes(:,3), distances(1:num_cities, 1:num_cities), weights(1))
-        write(io, *) weights(1)
-    end do
-    close(io)
-
-    ! Do a "better random breed", which is the same as above, but
-    ! now the best performing route out of the three is picked each 
-    ! generation
-    io = 1234
-    open(io, file="random_breed_better.txt", status="replace", action="write")
-    do i = 1, generations
-        call new_route(routes(:,1))
-        call calculate_total_distance(routes(:,3), distances(1:num_cities, 1:num_cities), weights(1))
-        call new_route(routes(:,2))
-        call calculate_total_distance(routes(:,3), distances(1:num_cities, 1:num_cities), weights(2))
-        call breed(routes(:,1), routes(:,2), distances(1:num_cities, 1:num_cities), routes(:,3))
-        call calculate_total_distance(routes(:,3), distances(1:num_cities, 1:num_cities), weights(3))
-        write(io, *) minval(weights(1:3))
-    end do
-    close(io)
-
     call mpi_finalize(rc)
+
+contains
+
+subroutine parallel_find_optimal_route(distances, num_candidates, num_bred, mutation_chance, generations, optimal_route)
+    implicit none
+
+    real(kind=real_kind), intent(in) :: distances(:,:), mutation_chance
+    integer(kind=int_kind), intent(in) :: num_candidates, num_bred, generations
+    integer(kind=int_kind), intent(out) :: optimal_route(size(distances, dim=1), generations)
+
+    integer(kind=int_kind) :: & 
+        possible_partners(2, num_candidates*(num_candidates-1)), &
+        candidates(size(distances, dim=1), num_candidates), &
+        children(size(distances, dim=1), num_bred), &
+        idx(num_candidates*(num_candidates-1)), &
+        i, j, gen, n
+
+    real(kind=real_kind) :: &
+        weights(2,num_candidates*(num_candidates-1)), &
+        random_val
+
+
+    if ( num_bred > num_candidates*(num_candidates-1) ) then
+        print *, "Number of children should not exceed the number of possible combinations of parents"
+        stop
+    end if
+
+    possible_partners = partner_permutations(num_candidates)
+
+    ! get random routes, calculate distances
+    do i = 1, num_candidates
+            
+        call new_route(candidates(:,i))
+        call calculate_total_distance(candidates(:,i), distances, weights(1,i))
+
+    end do
+
+
+    ! As "fitness", use this
+    ! weights(1,:num_candidates) = minval(weights(1,:num_candidates))/weights(1,:num_candidates)
+    weights(1,:num_candidates) = 1 - weights(1,:num_candidates)/maxval(weights(1,:num_candidates) + 1)
+
+
+    do gen = 1, generations
+    
+        ! calculate a combined fitness for partners by summing
+        ! their individuals fitnesses
+        do i = 1, size(possible_partners, dim=2)
+            weights(2,i) = sum(weights(1, possible_partners(:,i)))
+        end do
+
+        ! Randomly choose indices of partners, weighted by
+        ! their total fitness, then breed these partners to make
+        ! children
+        call shuffle(weights(2,:), idx)
+        do i = 1, num_bred
+            call breed( &
+                candidates(:,possible_partners(1,idx(i))), &
+                candidates(:, possible_partners(2, idx(i))), &
+                distances, &
+                children(:, i) &
+            )
+
+
+            ! mutation
+            call random_number(random_val)
+            if (random_val < mutation_chance) call mutate(children(:,i))
+
+            ! keep track of best route
+            call calculate_total_distance(children(:,i), distances, weights(1,i))
+            if (1 == i) then
+                optimal_route(:, gen) = children(:,1)
+            else
+                if (weights(1,i) < weights(1,i-1)) optimal_route(:,gen) = children(:,i)
+            end if
+        end do
+
+        ! print "(11i3)", children
+        ! print "(f5.0)", weights(1,1:num_bred)
+        ! stop
+
+
+        ! calculate fitness for children
+        ! print "(f10.3)", weights(1,1:num_bred)
+        ! weights(1,1:num_bred) = minval(weights(1,1:num_bred))/weights(1,1:num_bred)
+        weights(1,1:num_bred) = 1 - weights(1,1:num_bred)/(maxval(weights(1,1:num_bred))+1)
+        weights(1,1:num_bred) = weights(1,1:num_bred)/sum(weights(1,1:num_bred))
+        ! print *, sum(weights(1,1:num_bred))/size(weights(1,1:num_bred)), maxval(weights(1,1:num_bred))
+        ! print "(f6.3)", weights(1,1:num_bred)
+        ! cull randomly based on fitness
+        call shuffle(weights(1,1:num_bred), idx(1:num_bred))
+        ! print *
+        ! print "(i3)", idx(1:num_bred)
+        ! print *
+        ! print "(f6.2)", weights(1,1:num_bred) - weights(1,idx(1:num_bred))
+        ! stop
+        candidates(:,:) = children(:,idx(1:num_candidates))
+        ! set the living children's (new parents') fitnesses
+        weights(1,1:num_candidates) = weights(1,idx(1:num_candidates))
+        ! print *, sum(weights(1,1:num_candidates))/size(weights(1,1:num_candidates)), maxval(weights(1,1:num_candidates))
+
+    end do
+
+
+end subroutine
     
 end program tsp_ga

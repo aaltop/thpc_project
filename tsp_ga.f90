@@ -4,12 +4,14 @@ program tsp_ga
     use tsp
     implicit none
 
-    integer :: io, i, iostat, num_cities, num_considered, generations
+    integer :: io, i, iostat, num_cities, num_considered, generations, &
+        t0, t1, clock_rate
     integer, allocatable :: idx(:), routes(:,:)
 
     real(kind=real_kind), allocatable :: random_val(:), weights(:), &
         distances(:,:)
 
+    call system_clock(t0, clock_rate)
     ! read in the array of distances form a file
     !
     ! the file should be formatted such that the first line contains
@@ -33,8 +35,8 @@ program tsp_ga
     close(io)
     ! ====================================================================
 
-    num_cities = 11
-    generations = 1000
+    num_cities = 15
+    generations = 10000
 
     ! allocate(random_val(num_cities))
     allocate(weights(generations))
@@ -47,13 +49,14 @@ program tsp_ga
 
     call find_optimal_route(distances(1:num_cities, 1:num_cities), 10, 15, real(0.95, real_kind), generations, routes)
 
+    call system_clock(t1)
+    print '(a,g16.8,a)', 'Wall clock time: ',real(t1-t0,real_kind)/clock_rate,' seconds'
 
     ! Calculate the distances gained from the breeding algorithm
     io = 1234
     open(io, file="breed.txt", status="replace", action="write")
     do i = 1, generations
         
-        print "(11i3)", routes(:,i)
         call calculate_total_distance(routes(:,i), distances, weights(i))
         write(io, *) weights(i)
 
