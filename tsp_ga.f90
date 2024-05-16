@@ -1,8 +1,6 @@
 program tsp_ga
+    use globals
     implicit none
-
-    integer, parameter :: real_kind=8
-    integer, parameter :: int_kind=4
 
     integer :: io, i, iostat, num_cities, num_considered, generations
     integer, allocatable :: idx(:), routes(:,:)
@@ -48,6 +46,7 @@ program tsp_ga
     call find_optimal_route(distances(1:num_cities, 1:num_cities), 10, 15, real(0.95, real_kind), generations, routes)
 
 
+    ! Calculate the distances gained from the breeding algorithm
     io = 1234
     open(io, file="breed.txt", status="replace", action="write")
     do i = 1, generations
@@ -59,6 +58,7 @@ program tsp_ga
     end do
     close(io)
 
+    ! Do a random search
     io = 1234
     open(io, file="random_search.txt", status="replace", action="write")
     do i = 1, generations
@@ -68,6 +68,8 @@ program tsp_ga
     end do
     close(io)
 
+    ! Do a "random breed", whereby two random routes are bred
+    ! and the child is the new tested route
     io = 1234
     open(io, file="random_breed.txt", status="replace", action="write")
     do i = 1, generations
@@ -79,6 +81,9 @@ program tsp_ga
     end do
     close(io)
 
+    ! Do a "better random breed", which is the same as above, but
+    ! now the best performing route out of the three is picked each 
+    ! generation
     io = 1234
     open(io, file="random_breed_better.txt", status="replace", action="write")
     do i = 1, generations
@@ -91,12 +96,6 @@ program tsp_ga
         write(io, *) minval(weights(1:3))
     end do
     close(io)
-
-
-    ! allocate(idx(5))
-    ! call merge_argsort(distances(1:5, 1), idx)
-    ! print *, distances(1:5, 1)
-    ! print *, idx(5:1:-1)
     
 
     contains
