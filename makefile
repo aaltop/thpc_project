@@ -17,9 +17,12 @@ to_clean := $(prog) $(objects) $(mod_files)
 .PHONY: all
 all: $(prog)
 
+.PHONY: run
+run: run_serial run_parallel
+
 .PHONY: run_parallel
 run_parallel: tsp_ga_parallel
-	mpirun --oversubscribe -n 2 ./tsp_ga_parallel
+	mpirun --oversubscribe -n 4 ./tsp_ga_parallel
 
 tsp_ga_parallel: $(mod_objects) tsp_ga_parallel.o
 	$(compiler) -O2 $^ -o $@
