@@ -4,7 +4,7 @@ program tsp_ga
     integer, parameter :: real_kind=8
     integer, parameter :: int_kind=4
 
-    integer :: io, i, iostat, num_cities, num_considered
+    integer :: io, i, iostat, num_cities, num_considered, generations
     integer, allocatable :: idx(:), routes(:,:)
 
     real(kind=real_kind), allocatable :: random_val(:), weights(:), &
@@ -16,46 +16,82 @@ program tsp_ga
     ! the number of cities, and after that there is the array of
     ! cities' distances from each other
     ! ---------------------------------------------------------------
-    open(newunit=io, file="wg59_dist_array.txt", status="old", action="read")
+    io = 1234
+    open(newunit=io, file="wg59_dist_array.txt", status="old", action="read", iostat=iostat)
     read(io, *) num_cities
     allocate(distances(num_cities, num_cities))
+
 
     iostat = 0
     do i = 1,num_cities
         read(io, *, iostat=iostat) distances(1:num_cities, i)
         if (0 /= iostat) then
             print *, "something went wrong"
-            exit
+            stop
         end if
     end do
     close(io)
     ! ====================================================================
 
-    allocate(random_val(num_cities))
-    allocate(weights(num_cities))
-    weights = 0.0
-    weights(1) = 1.0
+    num_cities = 11
+    generations = 1000
 
-    allocate(idx(num_cities))
-    call shuffle(weights, idx)
+    ! allocate(random_val(num_cities))
+    allocate(weights(generations))
 
-    num_considered = 10
+    ! allocate(idx(generations))
+    ! call shuffle(weights, idx)
 
-    allocate(routes(11, num_considered))
-    do i = 1, 10
-        call new_route(routes(:, 1))
-        call new_route(routes(:, 2))
-        call breed(routes(:,1), routes(:,2), distances, routes(:,3))
-        print "(11i4)", routes(:,3)
-        call mutate(routes(:,3))
-        print "(11i4)", routes(:,3)
 
-        call calculate_total_distance(routes(:,1), distances, random_val(1))
-        call calculate_total_distance(routes(:,2), distances, random_val(2))
-        call calculate_total_distance(routes(:,3), distances, random_val(3))
-        print "(3f5.0)", random_val(1:3)
+    allocate(routes(num_cities, generations))
+
+    call find_optimal_route(distances(1:num_cities, 1:num_cities), 10, 15, real(0.95, real_kind), generations, routes)
+
+
+    io = 1234
+    open(io, file="breed.txt", status="replace", action="write")
+    do i = 1, generations
+        
+        print "(11i3)", routes(:,i)
+        call calculate_total_distance(routes(:,i), distances, weights(i))
+        write(io, *) weights(i)
 
     end do
+    close(io)
+
+    io = 1234
+    open(io, file="random_search.txt", status="replace", action="write")
+    do i = 1, generations
+        call new_route(routes(:,1))
+        call calculate_total_distance(routes(:,1), distances, weights(1))
+        write(io, *) weights(1)
+    end do
+    close(io)
+
+    io = 1234
+    open(io, file="random_breed.txt", status="replace", action="write")
+    do i = 1, generations
+        call new_route(routes(:,1))
+        call new_route(routes(:,2))
+        call breed(routes(:,1), routes(:,2), distances(1:num_cities, 1:num_cities), routes(:,3))
+        call calculate_total_distance(routes(:,3), distances(1:num_cities, 1:num_cities), weights(1))
+        write(io, *) weights(1)
+    end do
+    close(io)
+
+    io = 1234
+    open(io, file="random_breed_better.txt", status="replace", action="write")
+    do i = 1, generations
+        call new_route(routes(:,1))
+        call calculate_total_distance(routes(:,3), distances(1:num_cities, 1:num_cities), weights(1))
+        call new_route(routes(:,2))
+        call calculate_total_distance(routes(:,3), distances(1:num_cities, 1:num_cities), weights(2))
+        call breed(routes(:,1), routes(:,2), distances(1:num_cities, 1:num_cities), routes(:,3))
+        call calculate_total_distance(routes(:,3), distances(1:num_cities, 1:num_cities), weights(3))
+        write(io, *) minval(weights(1:3))
+    end do
+    close(io)
+
 
     ! allocate(idx(5))
     ! call merge_argsort(distances(1:5, 1), idx)
@@ -65,6 +101,138 @@ program tsp_ga
 
     contains
 
+    subroutine find_optimal_route(distances, num_candidates, num_bred, mutation_chance, generations, optimal_route)
+        implicit none
+
+        real(kind=real_kind), intent(in) :: distances(:,:), mutation_chance
+        integer(kind=int_kind), intent(in) :: num_candidates, num_bred, generations
+        integer(kind=int_kind), intent(out) :: optimal_route(size(distances, dim=1), generations)
+
+        integer(kind=int_kind) :: & 
+            possible_partners(2, num_candidates*(num_candidates-1)), &
+            candidates(size(distances, dim=1), num_candidates), &
+            children(size(distances, dim=1), num_bred), &
+            idx(num_candidates*(num_candidates-1)), &
+            i, j, gen, n
+
+        real(kind=real_kind) :: &
+            weights(2,num_candidates*(num_candidates-1)), &
+            random_val
+
+
+        if ( num_bred > num_candidates*(num_candidates-1) ) then
+            print *, "Number of children should not exceed the number of possible combinations of parents"
+            stop
+        end if
+
+        possible_partners = partner_permutations(num_candidates)
+
+        ! get random routes, calculate distances
+        do i = 1, num_candidates
+                
+            call new_route(candidates(:,i))
+            call calculate_total_distance(candidates(:,i), distances, weights(1,i))
+
+        end do
+
+
+        ! As "fitness", use this
+        ! weights(1,:num_candidates) = minval(weights(1,:num_candidates))/weights(1,:num_candidates)
+        weights(1,:num_candidates) = 1 - weights(1,:num_candidates)/maxval(weights(1,:num_candidates) + 1)
+
+
+        do gen = 1, generations
+        
+            ! calculate a combined fitness for partners by summing
+            ! their individuals fitnesses
+            do i = 1, size(possible_partners, dim=2)
+                weights(2,i) = sum(weights(1, possible_partners(:,i)))
+            end do
+
+            ! Randomly choose indices of partners, weighted by
+            ! their total fitness, then breed these partners to make
+            ! children
+            call shuffle(weights(2,:), idx)
+            do i = 1, num_bred
+                call breed( &
+                    candidates(:,possible_partners(1,idx(i))), &
+                    candidates(:, possible_partners(2, idx(i))), &
+                    distances, &
+                    children(:, i) &
+                )
+
+
+                ! mutation
+                call random_number(random_val)
+                if (random_val < mutation_chance) call mutate(children(:,i))
+
+                ! keep track of best route
+                call calculate_total_distance(children(:,i), distances, weights(1,i))
+                if (1 == i) then
+                    optimal_route(:, gen) = children(:,1)
+                else
+                    if (weights(1,i) < weights(1,i-1)) optimal_route(:,gen) = children(:,i)
+                end if
+            end do
+
+            ! print "(11i3)", children
+            ! print "(f5.0)", weights(1,1:num_bred)
+            ! stop
+
+
+            ! calculate fitness for children
+            ! print "(f10.3)", weights(1,1:num_bred)
+            ! weights(1,1:num_bred) = minval(weights(1,1:num_bred))/weights(1,1:num_bred)
+            weights(1,1:num_bred) = 1 - weights(1,1:num_bred)/(maxval(weights(1,1:num_bred))+1)
+            weights(1,1:num_bred) = weights(1,1:num_bred)/sum(weights(1,1:num_bred))
+            ! print *, sum(weights(1,1:num_bred))/size(weights(1,1:num_bred)), maxval(weights(1,1:num_bred))
+            ! print "(f6.3)", weights(1,1:num_bred)
+            ! cull randomly based on fitness
+            call shuffle(weights(1,1:num_bred), idx(1:num_bred))
+            ! print *
+            ! print "(i3)", idx(1:num_bred)
+            ! print *
+            ! print "(f6.2)", weights(1,1:num_bred) - weights(1,idx(1:num_bred))
+            ! stop
+            candidates(:,:) = children(:,idx(1:num_candidates))
+            ! set the living children's (new parents') fitnesses
+            weights(1,1:num_candidates) = weights(1,idx(1:num_candidates))
+            ! print *, sum(weights(1,1:num_candidates))/size(weights(1,1:num_candidates)), maxval(weights(1,1:num_candidates))
+
+        end do
+
+
+    end subroutine
+
+    ! for <num_candidates>, calculates all possible permutations
+    ! of two partners, such that no candidate is paired with itself.
+    function partner_permutations(num_candidates)
+        implicit none
+
+        integer(kind=int_kind), intent(in) :: num_candidates
+        integer(kind=int_kind) :: &
+            partner_permutations(2, num_candidates*(num_candidates-1)), &
+            idx, i, n
+        i = 0
+        idx = 1
+        do while (idx <= num_candidates*(num_candidates-1))
+
+            n = modulo(i, num_candidates)+1
+            if (n == (i/num_candidates+1)) then
+                i = i + 1
+                cycle
+            end if
+
+            partner_permutations(1,idx) = i/num_candidates + 1
+            partner_permutations(2,idx) = n
+
+            i = i + 1
+            idx = idx + 1
+        end do
+
+    end function partner_permutations
+
+    ! switch the places of two cities on <route>.
     subroutine mutate(route)
         implicit none
 
