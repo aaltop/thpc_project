@@ -243,6 +243,10 @@ program tsp_ga
 
         if ( 1 == size(route) .or. 2 == size(route) .or. 3 == size(route) ) return
 
+        ! NOTE: practically speaking, calling the shuffle is currently quite
+        ! expensive compared to what it is actually needed for here,
+        ! which is a uniform sample of two indices. Still, it does the
+        ! job.
         weights = 1.0
         call shuffle(weights, idx)
         ! always keep one (1) as first element
@@ -370,46 +374,21 @@ program tsp_ga
         integer(kind=int_kind), intent(out) :: idx(size(weights))
 
         real(kind=real_kind) :: random_val(size(weights))
-        integer(kind=int_kind) :: i, idx_nonzero(size(weights)), nonzero_weights, &
-            idx_zero(size(weights)), zero_weights, n
+        integer(kind=int_kind) :: i, n
+
+        if ( any(weights <= 0) ) then
+            print *, "Value error in shuffle: Weights should be positive"
+            stop
+        end if
 
         n = size(weights)
-
-        ! find the weights' indices that are non-zero and zero.
-        ! (Would probably be more sensible to just not allow non-positive
-        ! weights.)
-        ! -------------------------------------
-        nonzero_weights = 0
-        zero_weights = 0
-        do i = 1, n
-            
-            if (0 /= weights(i)) then
-                idx_nonzero(nonzero_weights+1) = i
-                nonzero_weights = nonzero_weights + 1
-            else
-                idx_zero(zero_weights+1) = i
-                zero_weights = zero_weights + 1
-            end if
-                
-        end do
-        ! =============================================
 
         ! sample based on okay weights
         call random_number(random_val)
         call merge_argsort( &
-        1/weights(idx_nonzero(1:nonzero_weights))*log(random_val(1:nonzero_weights)), & ! see Weighted Random Sampling (2005; Efraimidis, Spirakis)
-        idx(1:nonzero_weights) &
+        1/weights*log(random_val), & ! see Weighted Random Sampling (2005; Efraimidis, Spirakis)
+        idx &
         )
-
-        ! sample based on zero weights (uniform sample for all zero weights)
-        call merge_argsort(random_val(nonzero_weights+1:n), idx(nonzero_weights+1:n))
-        ! actually sort zero indices based on the sample order
-        do i = 0, zero_weights-1
-            idx(n-i) = idx_zero(idx(n-i))
-        end do
-
-
-
 
     end subroutine shuffle
 
