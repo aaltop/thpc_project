@@ -146,7 +146,6 @@ subroutine parallel_find_optimal_route(distances, num_candidates, num_bred, muta
 
 
     ! As "fitness", use this
-    ! weights(1,:num_candidates) = minval(weights(1,:num_candidates))/weights(1,:num_candidates)
     weights(1,:num_candidates) = 1 - weights(1,:num_candidates)/maxval(weights(1,:num_candidates) + 1)
 
 
@@ -184,29 +183,15 @@ subroutine parallel_find_optimal_route(distances, num_candidates, num_bred, muta
             end if
         end do
 
-        ! print "(11i3)", children
-        ! print "(f5.0)", weights(1,1:num_bred)
-        ! stop
-
 
         ! calculate fitness for children
-        ! print "(f10.3)", weights(1,1:num_bred)
-        ! weights(1,1:num_bred) = minval(weights(1,1:num_bred))/weights(1,1:num_bred)
         weights(1,1:num_bred) = 1 - weights(1,1:num_bred)/(maxval(weights(1,1:num_bred))+1)
         weights(1,1:num_bred) = weights(1,1:num_bred)/sum(weights(1,1:num_bred))
-        ! print *, sum(weights(1,1:num_bred))/size(weights(1,1:num_bred)), maxval(weights(1,1:num_bred))
-        ! print "(f6.3)", weights(1,1:num_bred)
         ! cull randomly based on fitness
         call shuffle(weights(1,1:num_bred), idx(1:num_bred))
-        ! print *
-        ! print "(i3)", idx(1:num_bred)
-        ! print *
-        ! print "(f6.2)", weights(1,1:num_bred) - weights(1,idx(1:num_bred))
-        ! stop
         candidates(:,:) = children(:,idx(1:num_candidates))
         ! set the living children's (new parents') fitnesses
         weights(1,1:num_candidates) = weights(1,idx(1:num_candidates))
-        ! print *, sum(weights(1,1:num_candidates))/size(weights(1,1:num_candidates)), maxval(weights(1,1:num_candidates))
 
     end do
 
