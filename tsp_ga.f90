@@ -11,6 +11,15 @@ program tsp_ga
     real(kind=real_kind), allocatable :: random_val(:), weights(:), &
         distances(:,:)
 
+    character(len=:), allocatable :: folder_command
+
+    ! make folder for generated data
+    print "(a)", "Creating folder for data..."
+    write(*, "(4x)", advance="no")
+    folder_command = "mkdir generated_data"
+    call system(folder_command)
+    print *
+
     call system_clock(t0, clock_rate)
     ! read in the array of distances form a file
     !
@@ -54,7 +63,7 @@ program tsp_ga
 
     ! Calculate the distances gained from the breeding algorithm
     io = 1234
-    open(io, file="breed.txt", status="replace", action="write")
+    open(io, file="generated_data/breed.txt", status="replace", action="write")
     do i = 1, generations
         
         call calculate_total_distance(routes(:,i), distances, weights(i))
@@ -65,7 +74,7 @@ program tsp_ga
 
     ! Do a random search
     io = 1234
-    open(io, file="random_search.txt", status="replace", action="write")
+    open(io, file="generated_data/random_search.txt", status="replace", action="write")
     do i = 1, generations
         call new_route(routes(:,1))
         call calculate_total_distance(routes(:,1), distances, weights(1))
@@ -76,7 +85,7 @@ program tsp_ga
     ! Do a "random breed", whereby two random routes are bred
     ! and the child is the new tested route
     io = 1234
-    open(io, file="random_breed.txt", status="replace", action="write")
+    open(io, file="generated_data/random_breed.txt", status="replace", action="write")
     do i = 1, generations
         call new_route(routes(:,1))
         call new_route(routes(:,2))
@@ -90,7 +99,7 @@ program tsp_ga
     ! now the best performing route out of the three is picked each 
     ! generation
     io = 1234
-    open(io, file="random_breed_better.txt", status="replace", action="write")
+    open(io, file="generated_data/random_breed_better.txt", status="replace", action="write")
     do i = 1, generations
         call new_route(routes(:,1))
         call calculate_total_distance(routes(:,3), distances(1:num_cities, 1:num_cities), weights(1))

@@ -13,6 +13,7 @@ program tsp_ga
         distances(:,:)
 
     character(len=80) :: file_name
+    character(len=:), allocatable :: folder_command
 
     ! MPI variables
     ! ------------------------------------
@@ -52,7 +53,16 @@ program tsp_ga
 
     ! ======================================
 
-    if ( 0 == id ) print "(a,i3)", "the number of tasks is", ntasks
+    ! make folder for generated data
+    if ( 0 == id ) then
+        print "(a)", "Creating folder for data..."
+        write(*, "(4x)", advance="no")
+        folder_command = "mkdir generated_data"
+        call system(folder_command)
+        print *
+    end if
+
+    if ( 0 == id ) print "(a,i3)", "the number of processes is", ntasks
     call system_clock(t0, clock_rate)
     ! read in the array of distances form a file
     !
@@ -94,7 +104,7 @@ program tsp_ga
     print '(a,x,g0,x,g16.8,a)', 'Wall clock time for process', id, real(t1-t0,real_kind)/clock_rate, ' seconds'
 
     write(file_name,"(g0)") id
-    file_name = "parallel_breed" // trim(file_name) // ".txt"
+    file_name = "generated_data/parallel_breed" // trim(file_name) // ".txt"
     
     io = 1234 + id
     open(io, file=file_name, status="replace", action="write")

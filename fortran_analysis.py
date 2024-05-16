@@ -5,10 +5,10 @@ import os
 
 def main():
 
-    breed = np.loadtxt("breed.txt")
-    random = np.loadtxt("random_search.txt")
-    random_breed = np.loadtxt("random_breed.txt")
-    random_breed_better = np.loadtxt("random_breed_better.txt")
+    breed = np.loadtxt("generated_data/breed.txt")
+    random = np.loadtxt("generated_data/random_search.txt")
+    random_breed = np.loadtxt("generated_data/random_breed.txt")
+    random_breed_better = np.loadtxt("generated_data/random_breed_better.txt")
 
 
     # get parallel files
@@ -16,7 +16,7 @@ def main():
     parallel_breeds = []
     while True:
         i += 1
-        filename = f"parallel_breed{i}.txt"
+        filename = f"generated_data/parallel_breed{i}.txt"
         if os.path.exists(filename):
 
             parallel_breeds.append(np.loadtxt(filename))
