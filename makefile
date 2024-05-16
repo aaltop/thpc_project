@@ -46,3 +46,4 @@ $(mod_objects): %.o: %.f90
 .PHONY: clean
 clean:
 	-rm $(to_clean)
+	-rm -r generated_data
