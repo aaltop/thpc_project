@@ -6,9 +6,10 @@ program tsp_ga
     implicit none
 
     integer :: io, i, iostat, num_cities, num_considered, generations, &
-        t0, t1, clock_rate
-    integer, allocatable :: idx(:), routes(:,:)
+        t0, t1, clock_rate, idx
+    integer, allocatable :: routes(:,:)
 
+    real(kind=real_kind) :: shortest_distance
     real(kind=real_kind), allocatable :: random_val(:), weights(:), &
         distances(:,:)
 
@@ -111,10 +112,27 @@ program tsp_ga
     do i = 1, generations
         
         call calculate_total_distance(routes(:,i), distances, weights(i))
+
+        ! track best route
+        if (1 == i) then
+            shortest_distance = weights(i)
+            idx = 1
+        else
+            if (weights(i) < shortest_distance) then
+                shortest_distance = weights(i)
+                idx = i
+            end if
+        end if
+
         write(io, *) weights(i)
 
     end do
     close(io)
+
+    print "(a,g0,a)", "Best route in process ", id, ":"
+    print *, routes(:,idx)
+    print "(a)", "Route distance:"
+    print *, weights(idx)
 
     call mpi_finalize(rc)
 
