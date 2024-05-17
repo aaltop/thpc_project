@@ -87,9 +87,8 @@ program tsp_ga
 
     ! make folder for generated data
     if ( 0 == id ) then
-        print "(a)", "Creating folder for data..."
         write(*, "(4x)", advance="no")
-        call system("mkdir generated_data")
+        call system("mkdir generated_data 2> /dev/null")
         print *
     end if
 

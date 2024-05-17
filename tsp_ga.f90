@@ -38,9 +38,8 @@ program tsp_ga
     ! =============================================
 
     ! make folder for generated data
-    print "(a)", "Creating folder for data..."
     write(*, "(4x)", advance="no")
-    call system("mkdir generated_data")
+    call system("mkdir generated_data 2> /dev/null")
     print *
 
     call system_clock(t0, clock_rate)
