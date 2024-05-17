@@ -6,14 +6,15 @@ program tsp_ga
     implicit none
 
     integer :: io, i, iostat, num_cities, num_considered, generations, &
-        t0, t1, clock_rate, idx
+        t0, t1, clock_rate, idx, ia, num_bred, num_candidates, &
+        num_migrators, migration_freq
     integer, allocatable :: routes(:,:)
 
-    real(kind=real_kind) :: shortest_distance
+    real(kind=real_kind) :: shortest_distance, mutation_chance
     real(kind=real_kind), allocatable :: distances(:,:), weights(:)
 
     character(len=80) :: file_name
-    character(len=:), allocatable :: folder_command
+    character(len=200) :: distances_file, arg
 
     ! MPI variables
     ! ------------------------------------
@@ -53,12 +54,42 @@ program tsp_ga
 
     ! ======================================
 
+
+    ! distances(1:num_cities, 1:num_cities), &
+    ! 10, 20, real(0.95, real_kind), generations, 2, 5, routes
+
+    ! read in parameters from command line
+    ! -------------------------------------
+    ia=command_argument_count()
+    if (7 /= ia) then
+        call get_command_argument(0,arg)
+        write(6,'(a,a,a)')   'usage: ',trim(arg),&
+            ' distances_file num_candidates num_bred mutation_chance generations num_migrators migration_freq'
+
+        write(6,'(a)')       '    distances_file = file to read city distances matrix from'
+        write(6,'(a)')       '    num_candidates  = number of candidate parents in each generation'
+        write(6,'(a)')       '    num_bred = number of children bred by the parents each generation'
+        write(6,'(a)')       '    mutation_chance = chance of mutation'
+        write(6,'(a)')       '    generations = number of generations to run the solver for'
+        write(6,'(a)')       '    num_migrators = how many should migrate'
+        write(6,'(a)')       '    migration_freq = how many generations should pass between migrations'
+        stop
+    end if
+
+    call get_command_argument(1,arg); read(arg,*) distances_file
+    call get_command_argument(2,arg); read(arg,*) num_candidates
+    call get_command_argument(3,arg); read(arg,*) num_bred
+    call get_command_argument(4,arg); read(arg,*) mutation_chance
+    call get_command_argument(5,arg); read(arg,*) generations
+    call get_command_argument(6,arg); read(arg,*) num_migrators
+    call get_command_argument(7,arg); read(arg,*) migration_freq
+    ! =============================================
+
     ! make folder for generated data
     if ( 0 == id ) then
         print "(a)", "Creating folder for data..."
         write(*, "(4x)", advance="no")
-        folder_command = "mkdir generated_data"
-        call system(folder_command)
+        call system("mkdir generated_data")
         print *
     end if
 
@@ -96,7 +127,7 @@ program tsp_ga
 
     call parallel_find_optimal_route( &
     distances(1:num_cities, 1:num_cities), &
-    10, 15, real(0.95, real_kind), generations, 3, 5, routes)
+    num_candidates, num_bred, mutation_chance, generations, num_migrators, migration_freq, routes)
 
     call system_clock(t1)
     print '(a,x,g0,x,g16.8,a)', 'Wall clock time for process', id, real(t1-t0,real_kind)/clock_rate, ' seconds'
@@ -110,7 +141,6 @@ program tsp_ga
     do i = 1, generations
         
         call calculate_total_distance(routes(:,i), distances, weights(i))
-
         ! track best route
         if (1 == i) then
             shortest_distance = weights(i)
@@ -121,14 +151,13 @@ program tsp_ga
                 idx = i
             end if
         end if
-
         write(io, *) weights(i)
 
     end do
     close(io)
 
-    print "(a,g0,a)", "Best route in process ", id, ":"
-    print *, routes(:,idx)
+    ! write(*, "(a,g0,a)", advance="no") "Best route in process ", id, ": "
+    print *, "Best route in process ", id, ": ", routes(:,idx)
     print "(a)", "Route distance:"
     print *, weights(idx)
     ! ==========================================
@@ -138,7 +167,7 @@ program tsp_ga
     ! ----------------------------------------
     call find_optimal_route( &
     distances(1:num_cities, 1:num_cities), &
-    10, 15, real(0.95, real_kind), generations, routes)
+    num_candidates, num_bred, mutation_chance, generations, routes)
 
     ! write distances to file
     write(file_name,"(g0)") id

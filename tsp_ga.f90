@@ -4,21 +4,43 @@ program tsp_ga
     use tsp
     implicit none
 
+
     integer :: io, i, iostat, num_cities, num_considered, generations, &
-        t0, t1, clock_rate, idx
+        t0, t1, clock_rate, idx, ia, num_bred, num_candidates
     integer, allocatable :: routes(:,:)
 
-    real(kind=real_kind) :: shortest_distance
+    real(kind=real_kind) :: shortest_distance, mutation_chance
     real(kind=real_kind), allocatable :: random_val(:), weights(:), &
         distances(:,:)
 
-    character(len=:), allocatable :: folder_command
+    character(len=200):: distances_file, arg
+
+
+    ! read in parameters from command line
+    ! -------------------------------------
+    ia=command_argument_count()
+    if (5 /= ia) then
+        call get_command_argument(0,arg)
+        write(6,'(a,a,a)')   'usage: ',trim(arg),' distances_file num_candidates num_bred mutation_chance generations'
+        write(6,'(a)')       '    distances_file = file to read city distances matrix from'
+        write(6,'(a)')       '    num_candidates  = number of candidate parents in each generation'
+        write(6,'(a)')       '    num_bred = number of children bred by the parents each generation'
+        write(6,'(a)')       '    mutation_chance = chance of mutation'
+        write(6,'(a)')       '    generations = number of generations to run the solver for'
+        stop
+    end if
+
+    call get_command_argument(1,arg); read(arg,*) distances_file
+    call get_command_argument(2,arg); read(arg,*) num_candidates
+    call get_command_argument(3,arg); read(arg,*) num_bred
+    call get_command_argument(4,arg); read(arg,*) mutation_chance
+    call get_command_argument(5,arg); read(arg,*) generations
+    ! =============================================
 
     ! make folder for generated data
     print "(a)", "Creating folder for data..."
     write(*, "(4x)", advance="no")
-    folder_command = "mkdir generated_data"
-    call system(folder_command)
+    call system("mkdir generated_data")
     print *
 
     call system_clock(t0, clock_rate)
@@ -29,7 +51,7 @@ program tsp_ga
     ! cities' distances from each other
     ! ---------------------------------------------------------------
     io = 1234
-    open(newunit=io, file="wg59_dist_array.txt", status="old", action="read", iostat=iostat)
+    open(newunit=io, file=trim(distances_file), status="old", action="read", iostat=iostat)
     read(io, *) num_cities
     allocate(distances(num_cities, num_cities))
 
@@ -57,7 +79,7 @@ program tsp_ga
 
     allocate(routes(num_cities, generations))
 
-    call find_optimal_route(distances(1:num_cities, 1:num_cities), 10, 15, real(0.95, real_kind), generations, routes)
+    call find_optimal_route(distances(1:num_cities, 1:num_cities), num_candidates, num_bred, mutation_chance, generations, routes)
 
     call system_clock(t1)
     print '(a,g16.8,a)', 'Wall clock time: ',real(t1-t0,real_kind)/clock_rate,' seconds'
