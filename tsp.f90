@@ -6,6 +6,25 @@ module tsp
     
 contains
 
+! Attempts to find the optimal route in the Travelling Salesman Problem
+! setting using a genetic algorithm.
+!
+! - distances(i,j) contains the distance between city "i" and city "j".
+! It is assumed that the total number of cities is the size of the first
+! dimension of this array.
+!
+! - <num_candidates> is the number of parents that can partake in breeding
+! each generation.
+!
+! - <num_bred> is the number of bred children each generation.
+!
+! - <mutation_chance> is the probability of a child mutating.
+!
+! - <generations> is the number of generations that should pass.
+! 
+! - The optimal routes each generation. The number of rows should equal
+! the number of rows of <distances>, while the number of columns should
+! equal the number of generations.
 subroutine find_optimal_route(distances, num_candidates, num_bred, mutation_chance, generations, optimal_route)
     implicit none
 
@@ -39,11 +58,7 @@ subroutine find_optimal_route(distances, num_candidates, num_bred, mutation_chan
         call calculate_total_distance(candidates(:,i), distances, weights(1,i))
 
     end do
-
-
-    ! As "fitness", use this
-    weights(1,:num_candidates) = 1 - weights(1,:num_candidates)/maxval(weights(1,:num_candidates) + 1)
-
+    call calculate_fitness(weights(1,:num_candidates))
 
     do gen = 1, generations
     
@@ -81,8 +96,7 @@ subroutine find_optimal_route(distances, num_candidates, num_bred, mutation_chan
 
 
         ! calculate fitness for children
-        weights(1,1:num_bred) = 1 - weights(1,1:num_bred)/(maxval(weights(1,1:num_bred))+1)
-        weights(1,1:num_bred) = weights(1,1:num_bred)/sum(weights(1,1:num_bred))
+        call calculate_fitness(weights(1,1:num_bred))
         ! cull randomly based on fitness
         call shuffle(weights(1,1:num_bred), idx(1:num_bred))
         candidates(:,:) = children(:,idx(1:num_candidates))
@@ -93,6 +107,15 @@ subroutine find_optimal_route(distances, num_candidates, num_bred, mutation_chan
 
 
 end subroutine
+
+subroutine calculate_fitness(weights)
+    implicit none
+
+    real(kind=real_kind), intent(inout) :: weights(:)
+
+    weights = 1 - weights/(maxval(weights)+1)
+
+end subroutine calculate_fitness
 
 ! for <num_candidates>, calculates all possible permutations
 ! of two partners, such that no candidate is paired with itself.
