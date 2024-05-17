@@ -12,17 +12,36 @@ def main():
 
 
     # get parallel files
+    # ------------------------------
+
+    # parallel algorithm with migration
     i = -1
-    parallel_breeds = []
+    parallel_breeds1 = []
     while True:
         i += 1
-        filename = f"generated_data/parallel_breed{i}.txt"
+        filename = f"generated_data/parallel_breed1_{i}.txt"
         if os.path.exists(filename):
 
-            parallel_breeds.append(np.loadtxt(filename))
+            parallel_breeds1.append(np.loadtxt(filename))
             continue
         
         break
+
+    # parallel algorithm without migration (just the serial, but
+    # in parallel processes)
+    i = -1
+    parallel_breeds2 = []
+    while True:
+        i += 1
+        filename = f"generated_data/parallel_breed2_{i}.txt"
+        if os.path.exists(filename):
+
+            parallel_breeds2.append(np.loadtxt(filename))
+            continue
+        
+        break
+
+    # =================================
 
     # plot all the data from the serial case
     idx = np.arange(len(breed))
@@ -37,10 +56,17 @@ def main():
     # plot the parallel cases' data such that just one is plotted first,
     # then each loop adding the data from another process and choosing
     # from each generation the best distance
-    parallel_breed = parallel_breeds[0]
+    parallel_breed = parallel_breeds1[0]
     for j in range(i):
         if 0 < j:
-            parallel_breed = np.where(parallel_breeds[j] < parallel_breed, parallel_breeds[j], parallel_breed)
+            parallel_breed = np.where(parallel_breeds1[j] < parallel_breed, parallel_breeds1[j], parallel_breed)
+        idx += 1
+        plt.plot(idx,np.sort(parallel_breed), label=f"Migration Parallel Breed with {j+1} processes, min={np.min(parallel_breed):.1f}", linewidth=2)
+
+    parallel_breed = parallel_breeds2[0]
+    for j in range(i):
+        if 0 < j:
+            parallel_breed = np.where(parallel_breeds2[j] < parallel_breed, parallel_breeds2[j], parallel_breed)
         idx += 1
         plt.plot(idx,np.sort(parallel_breed), label=f"Parallel Breed with {j+1} processes, min={np.min(parallel_breed):.1f}", linewidth=2)
 
