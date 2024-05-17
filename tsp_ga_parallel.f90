@@ -100,7 +100,10 @@ program tsp_ga
 
     allocate(routes(num_cities, generations))
 
-    call parallel_find_optimal_route(distances(1:num_cities, 1:num_cities), 10, 15, real(0.95, real_kind), generations, routes)
+    call parallel_find_optimal_route( &
+    distances(1:num_cities, 1:num_cities), &
+    10, 15, real(0.95, real_kind), generations, 3, 5, routes)
+
     call system_clock(t1)
     print '(a,x,g0,x,g16.8,a)', 'Wall clock time for process', id, real(t1-t0,real_kind)/clock_rate, ' seconds'
 
@@ -138,11 +141,38 @@ program tsp_ga
 
 contains
 
-subroutine parallel_find_optimal_route(distances, num_candidates, num_bred, mutation_chance, generations, optimal_route)
+! Attempts to find the optimal route in the Travelling Salesman Problem
+! setting using a genetic algorithm.
+!
+! - distances(i,j) contains the distance between city "i" and city "j".
+! It is assumed that the total number of cities is the size of the first
+! dimension of this array.
+!
+! - <num_candidates> is the number of parents that can partake in breeding
+! each generation.
+!
+! - <num_bred> is the number of bred children each generation.
+!
+! - <mutation_chance> is the probability of a child mutating.
+!
+! - <generations> is the number of generations that should pass.
+! 
+! - <num_migrators> is the number of migrating specimen each generation.
+!
+! - <migration_freq> tells how many generations should pass between
+! migrations.
+!
+! - The optimal routes each generation. The number of rows should equal
+! the number of rows of <distances>, while the number of columns should
+! equal the number of generations.
+subroutine parallel_find_optimal_route( &
+    distances, num_candidates, num_bred, mutation_chance, generations, &
+    num_migrators, migration_freq, optimal_route &
+    )
     implicit none
 
     real(kind=real_kind), intent(in) :: distances(:,:), mutation_chance
-    integer(kind=int_kind), intent(in) :: num_candidates, num_bred, generations
+    integer(kind=int_kind), intent(in) :: num_candidates, num_bred, generations, num_migrators, migration_freq
     integer(kind=int_kind), intent(out) :: optimal_route(size(distances, dim=1), generations)
 
     integer(kind=int_kind) :: & 
@@ -150,6 +180,7 @@ subroutine parallel_find_optimal_route(distances, num_candidates, num_bred, muta
         candidates(size(distances, dim=1), num_candidates), &
         children(size(distances, dim=1), num_bred), &
         idx(num_candidates*(num_candidates-1)), &
+        migrators(size(distances, dim=1), num_migrators), &
         i, j, gen, n
 
     real(kind=real_kind) :: &
@@ -162,6 +193,11 @@ subroutine parallel_find_optimal_route(distances, num_candidates, num_bred, muta
         stop
     end if
 
+    if (num_migrators > num_candidates) then
+        print *, "Number of migrators should not exceed the number of candidate parents"
+        stop
+    end if
+
     possible_partners = partner_permutations(num_candidates)
 
     ! get random routes, calculate distances
@@ -171,11 +207,7 @@ subroutine parallel_find_optimal_route(distances, num_candidates, num_bred, muta
         call calculate_total_distance(candidates(:,i), distances, weights(1,i))
 
     end do
-
-
-    ! As "fitness", use this
-    weights(1,:num_candidates) = 1 - weights(1,:num_candidates)/maxval(weights(1,:num_candidates) + 1)
-
+    call calculate_fitness(weights(1,:num_candidates))
 
     do gen = 1, generations
     
@@ -213,11 +245,54 @@ subroutine parallel_find_optimal_route(distances, num_candidates, num_bred, muta
 
 
         ! calculate fitness for children
-        weights(1,1:num_bred) = 1 - weights(1,1:num_bred)/(maxval(weights(1,1:num_bred))+1)
-        weights(1,1:num_bred) = weights(1,1:num_bred)/sum(weights(1,1:num_bred))
+        call calculate_fitness(weights(1,1:num_bred))
         ! cull randomly based on fitness
         call shuffle(weights(1,1:num_bred), idx(1:num_bred))
         candidates(:,:) = children(:,idx(1:num_candidates))
+
+        ! send migrators to neighboring process, accept from other
+        ! neighboring process
+        if (1 < ntasks .and. 0 == modulo(gen, migration_freq)) then
+            migrators(:,:) = candidates(:, 1:num_migrators)
+
+            if ( 0 == id ) then
+                call mpi_recv( &
+                candidates(:, 1:num_migrators), &
+                size(candidates(:, 1:num_migrators)), &
+                MPI_INTEGER, modulo(id-1,ntasks), tag, &
+                MPI_COMM_WORLD, status, rc&
+                )
+
+                call mpi_send( &
+                migrators, size(migrators), MPI_INTEGER, &
+                modulo(id+1,ntasks), tag, MPI_COMM_WORLD, rc &
+                )
+            else
+                call mpi_send( &
+                migrators, size(migrators), MPI_INTEGER, &
+                modulo(id+1,ntasks), tag, MPI_COMM_WORLD, rc &
+                )
+
+                call mpi_recv( &
+                candidates(:, 1:num_migrators), &
+                size(candidates(:, 1:num_migrators)), &
+                MPI_INTEGER, modulo(id-1,ntasks), tag, &
+                MPI_COMM_WORLD, status, rc&
+                )
+            end if
+
+            ! recalculate the weights (could also send, but seems easier
+            ! this way)
+            do i = 1, num_candidates
+                call calculate_total_distance(candidates(:,i), distances, weights(1,i))
+            end do
+            call calculate_fitness(weights(1, 1:num_candidates))
+
+            ! shuffle again to get new indices (maybe not the best,
+            ! but its also what's easiest right now)
+            call shuffle(weights(1,1:num_candidates), idx(1:num_candidates))
+            candidates(:,:) = children(:,idx(1:num_candidates))
+        end if
         ! set the living children's (new parents') fitnesses
         weights(1,1:num_candidates) = weights(1,idx(1:num_candidates))
 
