@@ -15,35 +15,20 @@ to_clean := $(prog) $(objects) $(mod_files)
 
 
 .PHONY: all
-all: $(prog)
+all:
+	$(MAKE) -C src all
 
+
+run_commands = run_serial run_parallel
 .PHONY: run
-run: run_serial run_parallel
+run: $(run_commands)
 
-.PHONY: run_parallel
-run_parallel: tsp_ga_parallel
-	./run_parallel.sh
+.PHONY: $(run_commands)
+$(run_commands): all
+	$(MAKE) -C run $@
 
-tsp_ga_parallel: $(mod_objects) tsp_ga_parallel.o
-	$(compiler) -O2 $^ -o $@
-
-tsp_ga_parallel.o: tsp_ga_parallel.f90
-	$(compiler) -c $<
-
-.PHONY: run_serial
-run_serial: tsp_ga
-	./run_serial.sh
-
-tsp_ga: $(mod_objects) tsp_ga.o
-	-$(compiler) -O2 $^ -o $@
-
-tsp_ga.o: tsp_ga.f90
-	-$(compiler) -c $<
-
-$(mod_objects): %.o: %.f90
-	-$(compiler) -c $<
 
 .PHONY: clean
 clean:
-	-rm $(to_clean)
-	-rm -r generated_data
+	$(MAKE) -C run clean
+	$(MAKE) -C src clean
