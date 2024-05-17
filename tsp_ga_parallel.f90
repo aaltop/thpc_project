@@ -10,8 +10,7 @@ program tsp_ga
     integer, allocatable :: routes(:,:)
 
     real(kind=real_kind) :: shortest_distance
-    real(kind=real_kind), allocatable :: random_val(:), weights(:), &
-        distances(:,:)
+    real(kind=real_kind), allocatable :: distances(:,:), weights(:)
 
     character(len=80) :: file_name
     character(len=:), allocatable :: folder_command
@@ -20,7 +19,7 @@ program tsp_ga
     ! ------------------------------------
     integer, parameter :: tag = 50
 
-    integer :: id, ntasks, source_id, dest_id, rc, nlen, mpi_neighbor
+    integer :: id, ntasks, nlen, rc
 
     real(real_kind), allocatable :: real_recv(:), real_send(:)
 
@@ -88,16 +87,11 @@ program tsp_ga
     close(io)
     ! ====================================================================
 
+
+    ! TSP solve with migration
+    ! ---------------------------------
     num_cities = 15
     generations = 10000
-
-    ! allocate(random_val(num_cities))
-    allocate(weights(generations))
-
-    ! allocate(idx(generations))
-    ! call shuffle(weights, idx)
-
-
     allocate(routes(num_cities, generations))
 
     call parallel_find_optimal_route( &
@@ -107,9 +101,10 @@ program tsp_ga
     call system_clock(t1)
     print '(a,x,g0,x,g16.8,a)', 'Wall clock time for process', id, real(t1-t0,real_kind)/clock_rate, ' seconds'
 
+    ! write distances to file
     write(file_name,"(g0)") id
-    file_name = "generated_data/parallel_breed" // trim(file_name) // ".txt"
-    
+    file_name = "generated_data/parallel_breed1_" // trim(file_name) // ".txt"
+    allocate(weights(generations))
     io = 1234 + id
     open(io, file=file_name, status="replace", action="write")
     do i = 1, generations
@@ -136,6 +131,41 @@ program tsp_ga
     print *, routes(:,idx)
     print "(a)", "Route distance:"
     print *, weights(idx)
+    ! ==========================================
+
+
+    ! TSP solve without migration
+    ! ----------------------------------------
+    call find_optimal_route( &
+    distances(1:num_cities, 1:num_cities), &
+    10, 15, real(0.95, real_kind), generations, routes)
+
+    ! write distances to file
+    write(file_name,"(g0)") id
+    file_name = "generated_data/parallel_breed2_" // trim(file_name) // ".txt"
+    io = 1234 + id
+    open(io, file=file_name, status="replace", action="write")
+    do i = 1, generations
+        
+        call calculate_total_distance(routes(:,i), distances, weights(i))
+
+        ! track best route
+        if (1 == i) then
+            shortest_distance = weights(i)
+            idx = 1
+        else
+            if (weights(i) < shortest_distance) then
+                shortest_distance = weights(i)
+                idx = i
+            end if
+        end if
+
+        write(io, *) weights(i)
+
+    end do
+    close(io)
+
+    ! =============================================
 
     call mpi_finalize(rc)
 
