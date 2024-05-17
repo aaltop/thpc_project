@@ -66,7 +66,6 @@ program tsp_ga
     close(io)
     ! ====================================================================
 
-    num_cities = 15
     generations = 10000
 
     ! allocate(random_val(num_cities))
@@ -78,7 +77,7 @@ program tsp_ga
 
     allocate(routes(num_cities, generations))
 
-    call find_optimal_route(distances(1:num_cities, 1:num_cities), num_candidates, num_bred, mutation_chance, generations, routes)
+    call find_optimal_route(distances, num_candidates, num_bred, mutation_chance, generations, routes)
 
     call system_clock(t1)
     print '(a,g16.8,a)', 'Wall clock time: ',real(t1-t0,real_kind)/clock_rate,' seconds'
@@ -101,7 +100,7 @@ program tsp_ga
             end if
         end if
 
-        write(io, *) weights(i)
+        write(io, *) weights(i), routes(:,i)
 
     end do
     close(io)
@@ -117,7 +116,7 @@ program tsp_ga
     do i = 1, generations
         call new_route(routes(:,1))
         call calculate_total_distance(routes(:,1), distances, weights(1))
-        write(io, *) weights(1)
+        write(io, *) weights(1), routes(:,1)
     end do
     close(io)
 
@@ -130,7 +129,7 @@ program tsp_ga
         call new_route(routes(:,2))
         call breed(routes(:,1), routes(:,2), distances(1:num_cities, 1:num_cities), routes(:,3))
         call calculate_total_distance(routes(:,3), distances(1:num_cities, 1:num_cities), weights(1))
-        write(io, *) weights(1)
+        write(io, *) weights(1), routes(:,3)
     end do
     close(io)
 
@@ -141,12 +140,12 @@ program tsp_ga
     open(io, file="generated_data/random_breed_better.txt", status="replace", action="write")
     do i = 1, generations
         call new_route(routes(:,1))
-        call calculate_total_distance(routes(:,3), distances(1:num_cities, 1:num_cities), weights(1))
+        call calculate_total_distance(routes(:,1), distances(1:num_cities, 1:num_cities), weights(1))
         call new_route(routes(:,2))
-        call calculate_total_distance(routes(:,3), distances(1:num_cities, 1:num_cities), weights(2))
+        call calculate_total_distance(routes(:,2), distances(1:num_cities, 1:num_cities), weights(2))
         call breed(routes(:,1), routes(:,2), distances(1:num_cities, 1:num_cities), routes(:,3))
         call calculate_total_distance(routes(:,3), distances(1:num_cities, 1:num_cities), weights(3))
-        write(io, *) minval(weights(1:3))
+        write(io, *) weights(minloc(weights(1:3))), routes(:, minloc(weights(1:3)))
     end do
     close(io)
     

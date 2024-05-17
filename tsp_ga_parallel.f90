@@ -107,7 +107,7 @@ program tsp_ga
 
 
     iostat = 0
-    do i = 1,num_cities
+    do i = 1, num_cities
         read(io, *, iostat=iostat) distances(1:num_cities, i)
         if (0 /= iostat) then
             print *, "something went wrong"
@@ -120,12 +120,11 @@ program tsp_ga
 
     ! TSP solve with migration
     ! ---------------------------------
-    num_cities = 15
     generations = 10000
     allocate(routes(num_cities, generations))
 
     call parallel_find_optimal_route( &
-    distances(1:num_cities, 1:num_cities), &
+    distances, &
     num_candidates, num_bred, mutation_chance, generations, num_migrators, migration_freq, routes)
 
     call system_clock(t1)
@@ -150,15 +149,13 @@ program tsp_ga
                 idx = i
             end if
         end if
-        write(io, *) weights(i)
+        write(io, *) weights(i),  routes(:, i)
 
     end do
     close(io)
 
     ! write(*, "(a,g0,a)", advance="no") "Best route in process ", id, ": "
-    print *, "Best route in process ", id, ": ", routes(:,idx)
-    print "(a)", "Route distance:"
-    print *, weights(idx)
+    print *, "Best route of distance", weights(idx), "in process", id, ":", routes(:,idx)
     ! ==========================================
 
 
@@ -188,7 +185,7 @@ program tsp_ga
             end if
         end if
 
-        write(io, *) weights(i)
+        write(io, *) weights(i), routes(:,i)
 
     end do
     close(io)
