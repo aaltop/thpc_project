@@ -77,11 +77,13 @@ program tsp_ga
 
     allocate(routes(num_cities, generations))
 
+    call breed_statistics(10)
+    stop
+
     call find_optimal_route(distances, num_candidates, num_bred, mutation_chance, generations, routes)
 
     call system_clock(t1)
     print '(a,g16.8,a)', 'Wall clock time: ',real(t1-t0,real_kind)/clock_rate,' seconds'
-
     ! Calculate the distances gained from the breeding algorithm
     io = 1234
     open(io, file="generated_data/breed.txt", status="replace", action="write")
@@ -148,5 +150,45 @@ program tsp_ga
         write(io, *) weights(minloc(weights(1:3))), routes(:, minloc(weights(1:3)))
     end do
     close(io)
+
+contains
+
+    ! For <repeat> runs of the TSP algorithm, collect stats of minimum,
+    ! mean, and maximum distance, and print out the mean of these stats
+    subroutine breed_statistics(repeat)
+        implicit none
+
+        integer(kind=int_kind), intent(in) :: repeat
+
+        integer(kind=int_kind) :: i, j
+
+        real(kind=real_kind) :: stats(4,repeat)
+
+        do i = 1, repeat
+            print "(a,g0,a,g0)", "round ", i, " out of ", repeat
+            call system_clock(t0, clock_rate)
+            call find_optimal_route(distances, num_candidates, num_bred, mutation_chance, generations, routes)
+            call system_clock(t1)
+            ! time
+            stats(4,i) = real(t1-t0,real_kind)/clock_rate
+
+            do j = 1, generations
+                
+                call calculate_total_distance(routes(:, j), distances, weights(j))
+            end do
+
+            ! min, mean, max
+            stats(1,i) = minval(weights)
+            stats(2,i) = sum(weights)/size(weights)
+            stats(3,i) = maxval(weights)
+            
+        end do
+
+        print *, "min", sum(stats(1,:))/size(stats(1,:))
+        print *, "mean", sum(stats(2,:))/size(stats(2,:))
+        print *, "max", sum(stats(3,:))/size(stats(3,:))
+        print *, "time", sum(stats(4,:))/size(stats(4,:))
+
+    end subroutine breed_statistics
     
 end program tsp_ga

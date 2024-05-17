@@ -122,6 +122,11 @@ program tsp_ga
     ! ---------------------------------
     generations = 10000
     allocate(routes(num_cities, generations))
+    allocate(weights(generations))
+
+    call breed_statistics(10)
+    call mpi_finalize(rc)
+    stop
 
     call parallel_find_optimal_route( &
     distances, &
@@ -133,7 +138,6 @@ program tsp_ga
     ! write distances to file
     write(file_name,"(g0)") id
     file_name = "generated_data/parallel_breed1_" // trim(file_name) // ".txt"
-    allocate(weights(generations))
     io = 1234 + id
     open(io, file=file_name, status="replace", action="write")
     do i = 1, generations
@@ -195,6 +199,85 @@ program tsp_ga
     call mpi_finalize(rc)
 
 contains
+
+! For <repeat> runs of the TSP algorithm, collect stats of minimum- ,
+! mean- , maximum distance, and time, and print out the (minimum) mean of these stats
+subroutine breed_statistics(repeat)
+    implicit none
+
+    integer(kind=int_kind), intent(in) :: repeat
+
+    integer(kind=int_kind) :: i, j
+
+    real(kind=real_kind) :: stats(4,repeat), recv_stats(4,repeat)
+
+    ! collect stats
+    do i = 1, repeat
+        if (0 == id) print "(a,g0,a,g0)", "round ", i, " out of ", repeat
+        call system_clock(t0, clock_rate)
+        call parallel_find_optimal_route( &
+        distances, &
+        num_candidates, num_bred, mutation_chance, generations, &
+        num_migrators, migration_freq, routes)
+        call system_clock(t1)
+        ! time
+        stats(4,i) = real(t1-t0,real_kind)/clock_rate
+
+        do j = 1, generations
+            call calculate_total_distance(routes(:, j), distances, weights(j))
+        end do
+        ! min, mean, max
+        stats(1,i) = minval(weights)
+        stats(2,i) = sum(weights)/size(weights)
+        stats(3,i) = maxval(weights)
+        
+    end do
+
+
+    ! collect the stats from each process
+    if ( 1 < ntasks ) then
+        
+        if ( 0 == id ) then
+            
+            do i = 1, ntasks-1
+                
+                call mpi_recv( &
+                recv_stats, &
+                size(recv_stats), &
+                MPI_REAL, i, tag, &
+                MPI_COMM_WORLD, status, rc&
+                )
+
+                ! the best distance metrics
+                where (recv_stats(1:3,:) < stats(1:3,:))
+                    stats(1:3,:) = recv_stats(1:3,:)
+                end where
+
+                ! the worst times
+                where (recv_stats(4,:) > stats(4,:))
+                    stats(4,:) = recv_stats(4,:)
+                end where
+
+            end do
+
+            print *, "min", sum(stats(1,:))/size(stats(1,:))
+            print *, "mean", sum(stats(2,:))/size(stats(2,:))
+            print *, "max", sum(stats(3,:))/size(stats(3,:))
+            print *, "time", sum(stats(4,:))/size(stats(4,:))
+
+        else
+
+            call mpi_send( &
+            stats, size(stats), MPI_REAL, &
+            0, tag, MPI_COMM_WORLD, rc &
+            )
+
+        end if
+
+    end if
+
+end subroutine breed_statistics
+
 
 ! Attempts to find the optimal route in the Travelling Salesman Problem
 ! setting using a genetic algorithm.
