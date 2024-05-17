@@ -2,13 +2,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+def load_distances(filename):
+
+    return np.loadtxt(filename)[:, 0]
 
 def main():
 
-    breed = np.loadtxt("generated_data/breed.txt")
-    random = np.loadtxt("generated_data/random_search.txt")
-    random_breed = np.loadtxt("generated_data/random_breed.txt")
-    random_breed_better = np.loadtxt("generated_data/random_breed_better.txt")
+    breed = load_distances("generated_data/breed.txt")
+    random = load_distances("generated_data/random_search.txt")
+    random_breed = load_distances("generated_data/random_breed.txt")
+    random_breed_better = load_distances("generated_data/random_breed_better.txt")
 
 
     # get parallel files
@@ -22,7 +25,7 @@ def main():
         filename = f"generated_data/parallel_breed1_{i}.txt"
         if os.path.exists(filename):
 
-            parallel_breeds1.append(np.loadtxt(filename))
+            parallel_breeds1.append(load_distances(filename))
             continue
         
         break
@@ -36,7 +39,7 @@ def main():
         filename = f"generated_data/parallel_breed2_{i}.txt"
         if os.path.exists(filename):
 
-            parallel_breeds2.append(np.loadtxt(filename))
+            parallel_breeds2.append(load_distances(filename))
             continue
         
         break
@@ -61,14 +64,22 @@ def main():
         if 0 < j:
             parallel_breed = np.where(parallel_breeds1[j] < parallel_breed, parallel_breeds1[j], parallel_breed)
         idx += 1
-        plt.plot(idx,np.sort(parallel_breed), label=f"Migration Parallel Breed with {j+1} processes, min={np.min(parallel_breed):.1f}", linewidth=2)
+        plt.plot(
+            idx,np.sort(parallel_breed), 
+            label=f"Migration Parallel Breed with {j+1} processes, min={np.min(parallel_breed):.1f}", 
+            linewidth=2, linestyle="--"
+        )
 
     parallel_breed = parallel_breeds2[0]
     for j in range(i):
         if 0 < j:
             parallel_breed = np.where(parallel_breeds2[j] < parallel_breed, parallel_breeds2[j], parallel_breed)
         idx += 1
-        plt.plot(idx,np.sort(parallel_breed), label=f"Parallel Breed with {j+1} processes, min={np.min(parallel_breed):.1f}", linewidth=2)
+        plt.plot(
+            idx,np.sort(parallel_breed), 
+            label=f"Parallel Breed with {j+1} processes, min={np.min(parallel_breed):.1f}",
+            linewidth=2
+        )
 
     plt.legend()
     plt.show()
