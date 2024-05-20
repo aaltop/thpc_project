@@ -175,8 +175,13 @@ program tsp_ga
 
 contains
 
-! For <repeat> runs of the TSP algorithm, collect stats of minimum- ,
-! mean- , maximum distance, and time, and print out the (minimum) mean of these stats
+!For <repeat> runs of the TSP algorithm, collect stats of 
+! - minimum distance,
+! - mean distance,
+! - maximum distance,
+! - time to run,
+! - generation of minimum distance,
+! and print out the (minimum) mean of these stats
 subroutine breed_statistics(repeat)
     implicit none
 
@@ -184,7 +189,8 @@ subroutine breed_statistics(repeat)
 
     integer(kind=int_kind) :: i, j
 
-    real(kind=real_kind) :: stats(4,repeat), recv_stats(4,repeat)
+    real(kind=real_kind) :: stats(5,repeat), recv_stats(5,repeat)
+    character(len=80) :: temp
 
     ! collect stats
     do i = 1, repeat
@@ -202,6 +208,8 @@ subroutine breed_statistics(repeat)
         stats(1,i) = minval(weights)
         stats(2,i) = sum(weights)/size(weights)
         stats(3,i) = maxval(weights)
+        write(temp,*) minloc(weights)
+        read(temp,*) stats(5,i)
         
     end do
 
@@ -225,6 +233,11 @@ subroutine breed_statistics(repeat)
                     stats(1:3,:) = recv_stats(1:3,:)
                 end where
 
+                ! the best generations
+                where (recv_stats(5,:) < stats(5,:))
+                    stats(5,:) = recv_stats(5,:)
+                end where
+
                 ! the worst times
                 where (recv_stats(4,:) > stats(4,:))
                     stats(4,:) = recv_stats(4,:)
@@ -233,6 +246,7 @@ subroutine breed_statistics(repeat)
             end do
 
             print *, "min", sum(stats(1,:))/size(stats(1,:))
+            print *, "gen of min", sum(stats(5,:))/size(stats(5,:))
             print *, "mean", sum(stats(2,:))/size(stats(2,:))
             print *, "max", sum(stats(3,:))/size(stats(3,:))
             print *, "time", sum(stats(4,:))/size(stats(4,:))
@@ -252,6 +266,7 @@ subroutine breed_statistics(repeat)
 
     ! if just one task, just print the things
     print *, "min", sum(stats(1,:))/size(stats(1,:))
+    print *, "gen of min", sum(stats(5,:))/size(stats(5,:))
     print *, "mean", sum(stats(2,:))/size(stats(2,:))
     print *, "max", sum(stats(3,:))/size(stats(3,:))
     print *, "time", sum(stats(4,:))/size(stats(4,:))

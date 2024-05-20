@@ -138,8 +138,13 @@ program tsp_ga
 
 contains
 
-    ! For <repeat> runs of the TSP algorithm, collect stats of minimum,
-    ! mean, and maximum distance, and print out the mean of these stats
+    ! For <repeat> runs of the TSP algorithm, collect stats of 
+    ! - minimum distance,
+    ! - mean distance,
+    ! - maximum distance,
+    ! - time to run,
+    ! - generation of minimum distance,
+    ! and print out the mean of these stats
     subroutine breed_statistics(repeat)
         implicit none
 
@@ -147,7 +152,8 @@ contains
 
         integer(kind=int_kind) :: i, j
 
-        real(kind=real_kind) :: stats(4,repeat)
+        real(kind=real_kind) :: stats(5,repeat)
+        character(len=80) :: temp
 
         do i = 1, repeat
             print "(a,g0,a,g0)", "round ", i, " out of ", repeat
@@ -156,15 +162,17 @@ contains
             call system_clock(t1)
             ! time
             stats(4,i) = real(t1-t0,real_kind)/clock_rate
-
             ! min, mean, max
             stats(1,i) = minval(weights)
             stats(2,i) = sum(weights)/size(weights)
             stats(3,i) = maxval(weights)
+            write(temp,*) minloc(weights)
+            read(temp,*) stats(5,i)
             
         end do
 
         print *, "min", sum(stats(1,:))/size(stats(1,:))
+        print *, "gen of min", sum(stats(5,:))/size(stats(5,:))
         print *, "mean", sum(stats(2,:))/size(stats(2,:))
         print *, "max", sum(stats(3,:))/size(stats(3,:))
         print *, "time", sum(stats(4,:))/size(stats(4,:))
