@@ -101,7 +101,7 @@ program tsp_ga
     ! cities' distances from each other
     ! ---------------------------------------------------------------
     io = 1234
-    open(newunit=io, file="wg59_dist_array.txt", status="old", action="read", iostat=iostat)
+    open(newunit=io, file=distances_file, status="old", action="read", iostat=iostat)
     read(io, *) num_cities
     allocate(distances(num_cities, num_cities))
 
@@ -120,13 +120,12 @@ program tsp_ga
 
     ! TSP solve with migration
     ! ---------------------------------
-    generations = 10000
     allocate(routes(num_cities, generations))
     allocate(weights(generations))
 
-    call breed_statistics(10)
-    call mpi_finalize(rc)
-    stop
+    ! call breed_statistics(10)
+    ! call mpi_finalize(rc)
+    ! stop
 
     call parallel_find_optimal_route( &
     distances, &
@@ -329,6 +328,10 @@ subroutine parallel_find_optimal_route( &
     if ( num_bred > num_candidates*(num_candidates-1) ) then
         print *, "Number of children should not exceed the number of possible combinations of parents"
         stop
+    end if
+
+    if (num_bred < num_candidates) then
+        print *, "Number of children should be greater than or equal to the number of candidate parents"
     end if
 
     if (num_migrators > num_candidates) then
