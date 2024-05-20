@@ -410,7 +410,7 @@ subroutine parallel_find_optimal_route( &
 
             ! recalculate the weights (could also send, but seems easier
             ! this way)
-            do i = 1, num_candidates
+            do i = 1, num_migrators
                 call calculate_total_distance(candidates(:,i), distances, weights(1,i))
             end do
             call calculate_fitness(weights(1, 1:num_candidates))
