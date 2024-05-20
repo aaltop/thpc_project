@@ -66,8 +66,6 @@ program tsp_ga
     close(io)
     ! ====================================================================
 
-    generations = 10000
-
     ! allocate(random_val(num_cities))
     allocate(weights(generations))
 
@@ -77,10 +75,10 @@ program tsp_ga
 
     allocate(routes(num_cities, generations))
 
-    call breed_statistics(10)
-    stop
+    ! call breed_statistics(10)
+    ! stop
 
-    call find_optimal_route(distances, num_candidates, num_bred, mutation_chance, generations, routes)
+    call find_optimal_route(distances, num_candidates, num_bred, mutation_chance, generations, routes, weights)
 
     call system_clock(t1)
     print '(a,g16.8,a)', 'Wall clock time: ',real(t1-t0,real_kind)/clock_rate,' seconds'
@@ -88,19 +86,6 @@ program tsp_ga
     io = 1234
     open(io, file="generated_data/breed.txt", status="replace", action="write")
     do i = 1, generations
-        
-        call calculate_total_distance(routes(:,i), distances, weights(i))
-
-        ! track best route
-        if (1 == i) then
-            shortest_distance = weights(i)
-            idx = 1
-        else
-            if (weights(i) < shortest_distance) then
-                shortest_distance = weights(i)
-                idx = i
-            end if
-        end if
 
         write(io, *) weights(i), routes(:,i)
 
@@ -108,9 +93,9 @@ program tsp_ga
     close(io)
 
     print "(a,g0,a)", "Best route:"
-    print *, routes(:,idx)
+    print *, routes(:,minloc(weights))
     print "(a)", "Route distance:"
-    print *, weights(idx)
+    print *, weights(minloc(weights))
 
     ! Do a random search
     io = 1234
@@ -167,15 +152,10 @@ contains
         do i = 1, repeat
             print "(a,g0,a,g0)", "round ", i, " out of ", repeat
             call system_clock(t0, clock_rate)
-            call find_optimal_route(distances, num_candidates, num_bred, mutation_chance, generations, routes)
+            call find_optimal_route(distances, num_candidates, num_bred, mutation_chance, generations, routes, weights)
             call system_clock(t1)
             ! time
             stats(4,i) = real(t1-t0,real_kind)/clock_rate
-
-            do j = 1, generations
-                
-                call calculate_total_distance(routes(:, j), distances, weights(j))
-            end do
 
             ! min, mean, max
             stats(1,i) = minval(weights)

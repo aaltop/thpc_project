@@ -129,7 +129,7 @@ program tsp_ga
 
     call parallel_find_optimal_route( &
     distances, &
-    num_candidates, num_bred, mutation_chance, generations, num_migrators, migration_freq, routes)
+    num_candidates, num_bred, mutation_chance, generations, num_migrators, migration_freq, routes, weights)
 
     call system_clock(t1)
     print '(a,x,g0,x,g16.8,a)', 'Wall clock time for process', id, real(t1-t0,real_kind)/clock_rate, ' seconds'
@@ -141,24 +141,13 @@ program tsp_ga
     open(io, file=file_name, status="replace", action="write")
     do i = 1, generations
         
-        call calculate_total_distance(routes(:,i), distances, weights(i))
-        ! track best route
-        if (1 == i) then
-            shortest_distance = weights(i)
-            idx = 1
-        else
-            if (weights(i) < shortest_distance) then
-                shortest_distance = weights(i)
-                idx = i
-            end if
-        end if
         write(io, *) weights(i),  routes(:, i)
 
     end do
     close(io)
 
     ! write(*, "(a,g0,a)", advance="no") "Best route in process ", id, ": "
-    print *, "Best route of distance", weights(idx), "in process", id, ":", routes(:,idx)
+    print *, "Best route of distance", weights(minloc(weights)), "in process", id, ":", routes(:,minloc(weights))
     ! ==========================================
 
 
@@ -166,7 +155,7 @@ program tsp_ga
     ! ----------------------------------------
     call find_optimal_route( &
     distances(1:num_cities, 1:num_cities), &
-    num_candidates, num_bred, mutation_chance, generations, routes)
+    num_candidates, num_bred, mutation_chance, generations, routes, weights)
 
     ! write distances to file
     write(file_name,"(g0)") id
@@ -175,19 +164,6 @@ program tsp_ga
     open(io, file=file_name, status="replace", action="write")
     do i = 1, generations
         
-        call calculate_total_distance(routes(:,i), distances, weights(i))
-
-        ! track best route
-        if (1 == i) then
-            shortest_distance = weights(i)
-            idx = 1
-        else
-            if (weights(i) < shortest_distance) then
-                shortest_distance = weights(i)
-                idx = i
-            end if
-        end if
-
         write(io, *) weights(i), routes(:,i)
 
     end do
@@ -217,14 +193,11 @@ subroutine breed_statistics(repeat)
         call parallel_find_optimal_route( &
         distances, &
         num_candidates, num_bred, mutation_chance, generations, &
-        num_migrators, migration_freq, routes)
+        num_migrators, migration_freq, routes, weights)
         call system_clock(t1)
         ! time
         stats(4,i) = real(t1-t0,real_kind)/clock_rate
 
-        do j = 1, generations
-            call calculate_total_distance(routes(:, j), distances, weights(j))
-        end do
         ! min, mean, max
         stats(1,i) = minval(weights)
         stats(2,i) = sum(weights)/size(weights)
@@ -273,7 +246,15 @@ subroutine breed_statistics(repeat)
 
         end if
 
+        return
+
     end if
+
+    ! if just one task, just print the things
+    print *, "min", sum(stats(1,:))/size(stats(1,:))
+    print *, "mean", sum(stats(2,:))/size(stats(2,:))
+    print *, "max", sum(stats(3,:))/size(stats(3,:))
+    print *, "time", sum(stats(4,:))/size(stats(4,:))
 
 end subroutine breed_statistics
 
@@ -304,13 +285,14 @@ end subroutine breed_statistics
 ! equal the number of generations.
 subroutine parallel_find_optimal_route( &
     distances, num_candidates, num_bred, mutation_chance, generations, &
-    num_migrators, migration_freq, optimal_route &
+    num_migrators, migration_freq, optimal_route, route_lengths &
     )
     implicit none
 
     real(kind=real_kind), intent(in) :: distances(:,:), mutation_chance
     integer(kind=int_kind), intent(in) :: num_candidates, num_bred, generations, num_migrators, migration_freq
     integer(kind=int_kind), intent(out) :: optimal_route(size(distances, dim=1), generations)
+    real(kind=real_kind), intent(out) :: route_lengths(generations)
 
     integer(kind=int_kind) :: & 
         possible_partners(2, num_candidates*(num_candidates-1)), &
@@ -379,8 +361,12 @@ subroutine parallel_find_optimal_route( &
             call calculate_total_distance(children(:,i), distances, weights(1,i))
             if (1 == i) then
                 optimal_route(:, gen) = children(:,1)
+                route_lengths(gen) = weights(1,1)
             else
-                if (weights(1,i) < weights(1,i-1)) optimal_route(:,gen) = children(:,i)
+                if (weights(1,i) < weights(1,i-1)) then
+                    optimal_route(:,gen) = children(:,i)
+                    route_lengths(gen) = weights(1,i)
+                end if
             end if
         end do
 

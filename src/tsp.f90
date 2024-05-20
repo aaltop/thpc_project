@@ -22,15 +22,19 @@ contains
 !
 ! - <generations> is the number of generations that should pass.
 ! 
-! - The optimal routes each generation. The number of rows should equal
+! - <optimal_route> will contain the optimal routes each generation. The number of rows should equal
 ! the number of rows of <distances>, while the number of columns should
 ! equal the number of generations.
-subroutine find_optimal_route(distances, num_candidates, num_bred, mutation_chance, generations, optimal_route)
+!
+! - <route_lengths> will contain the lengths of the corresponding routes in
+! <optimal_route>, and should therefore be of length <generations>.
+subroutine find_optimal_route(distances, num_candidates, num_bred, mutation_chance, generations, optimal_route, route_lengths)
     implicit none
 
     real(kind=real_kind), intent(in) :: distances(:,:), mutation_chance
     integer(kind=int_kind), intent(in) :: num_candidates, num_bred, generations
     integer(kind=int_kind), intent(out) :: optimal_route(size(distances, dim=1), generations)
+    real(kind=real_kind), intent(out) :: route_lengths(generations)
 
     integer(kind=int_kind) :: & 
         possible_partners(2, num_candidates*(num_candidates-1)), &
@@ -47,6 +51,10 @@ subroutine find_optimal_route(distances, num_candidates, num_bred, mutation_chan
     if ( num_bred > num_candidates*(num_candidates-1) ) then
         print *, "Number of children should not exceed the number of possible combinations of parents"
         stop
+    end if
+
+    if (num_bred < num_candidates) then
+        print *, "Number of children should be greater than or equal to the number of candidate parents"
     end if
 
     possible_partners = partner_permutations(num_candidates)
@@ -89,8 +97,12 @@ subroutine find_optimal_route(distances, num_candidates, num_bred, mutation_chan
             call calculate_total_distance(children(:,i), distances, weights(1,i))
             if (1 == i) then
                 optimal_route(:, gen) = children(:,1)
+                route_lengths(gen) = weights(1,1)
             else
-                if (weights(1,i) < weights(1,i-1)) optimal_route(:,gen) = children(:,i)
+                if (weights(1,i) < weights(1,i-1)) then
+                    optimal_route(:,gen) = children(:,i)
+                    route_lengths(gen) = weights(1,i)
+                end if
             end if
         end do
 
