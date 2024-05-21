@@ -5,7 +5,7 @@ most easily be perfomed by the command
 
 > make run
 
-An example of running the command is included in the file `example_output.txt`. Running the programs will also produce files in the subdirectory `generated_data`. These files will contain on each line the best route for each generation of running the algorithm. The first value on a line will be the distance of the route, and the rest of the line is the indices of the points of the route. `breed.txt` will contain the serial algorithm run, files `parallel1_<i>.txt` will contain the parallel algorithm run for process i, files `parallel2_<i>.txt` will contain the parallel run of the serial algorithm for process i (the serial algorithm is also run in each process in the parallel program). Files `random_search.txt`, `random_breed.txt`, and `random_breed_better.txt` will the runs of more naive algorithms (these are run in the serial program). Depending on the arguments to the programs, `generated_data` can be quite large, but for the default arguments, should be less than 100MB.
+An example of running the command is included in the file `example_output.txt`. Running the programs will also produce files in the subdirectory `generated_data`. These files will contain on each line the best route for each generation of running the algorithm. The first value on a line will be the distance of the route, and the rest of the line is the indices of the points of the route. `breed.txt` will contain the serial algorithm run, files `parallel1_<i>.txt` will contain the parallel algorithm run for process i, files `parallel2_<i>.txt` will contain the parallel run of the serial algorithm for process i (the serial algorithm is also run in each process in the parallel program). Files `random_search.txt`, `random_breed.txt`, and `random_breed_better.txt` will contain the runs of more naive algorithms (these are run in the serial program). Depending on the arguments to the programs, `generated_data` can be quite large, but for the default arguments, should be less than 100MB.
 
 
 Alternatively, the serial program can be run by the shell script 
@@ -16,7 +16,7 @@ and the parallel program by running the shell script
 
 > ./parallel.sh
 
-both of which are run by the `make run`. When running by either of these or `make run`, the arguments to the program can supplied using the text files `serial_args.txt` and `parallel_args.txt`. Multiple lines of arguments in the files will all be run consecutively.
+both of which are run by the `make run`. When running by either of these or `make run`, the arguments to the program can supplied using the text files `serial_args.txt` and `parallel_args.txt`. These should already contain usable example arguments. Multiple lines of arguments in the files will all be run consecutively.
 
 Finally, the serial program can also be run
 by

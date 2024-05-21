@@ -20,4 +20,5 @@ These steps can be performed individually for manual compilation. In either case
 
 The above compiled files can be easily cleaned by the command `make clean`.
 This runs the following command:
+
 > rm ../run/tsp_ga ../run/tsp_ga_parallel globals.o utils.o tsp.o tsp_ga.o tsp_ga_parallel.o globals.mod utils.mod tsp.mod

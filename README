@@ -12,14 +12,25 @@ have been developed on a Windows Subsystem for Linux 2 with Ubuntu 20.04.
 ## Compilation
 
 Refer further to the README in the src/ directory for compilation instructions.
-Should `make` be available, compilation can be easily performed from the top-level directory by running the command `make`, which simply delegates
+Should `make` be available, compilation can be easily performed from the top-level directory by running the command
+
+> make
+
+which simply delegates
 to the Makefile in the src/ directory.
 
 ## Running
 
 Refer further to the README in the run/ directory for running instructions.
-The programs can be both compiled and run from the top-level directory by the command `make run`, which
-delegates compilation and running to the respective directories.
+The programs can be both compiled and run from the top-level directory by the command
+
+> make run
+
+ which delegates compilation and running to the respective directories.
 
 Files and directories created during compilation and running can be cleaned
-using `make clean` in the top-level directory.
+using
+
+> make clean
+
+ in the top-level directory.
