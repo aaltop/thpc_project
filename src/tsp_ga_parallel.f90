@@ -5,10 +5,10 @@ program tsp_ga
     use tsp
     implicit none
 
-    integer :: io, i, iostat, num_cities, num_considered, generations, &
+    integer(kind=int_kind) :: io, i, iostat, num_cities, num_considered, generations, &
         t0, t1, clock_rate, idx, ia, num_bred, num_candidates, &
         num_migrators, migration_freq
-    integer, allocatable :: routes(:,:)
+    integer(kind=int_kind), allocatable :: routes(:,:)
 
     real(kind=real_kind) :: shortest_distance, mutation_chance
     real(kind=real_kind), allocatable :: distances(:,:), weights(:)
@@ -22,9 +22,7 @@ program tsp_ga
 
     integer :: id, ntasks, nlen, rc
 
-    real(real_kind), allocatable :: real_recv(:), real_send(:)
-
-    integer,dimension(mpi_status_size) :: status
+    integer, dimension(mpi_status_size) :: status
 
     character(len=MPI_MAX_PROCESSOR_NAME) :: host
 
@@ -123,7 +121,7 @@ program tsp_ga
     allocate(routes(num_cities, generations))
     allocate(weights(generations))
 
-    ! call breed_statistics(10)
+    ! call breed_statistics(int(10, int_kind))
     ! call mpi_finalize(rc)
     ! stop
 
@@ -153,6 +151,7 @@ program tsp_ga
 
     ! TSP solve without migration
     ! ----------------------------------------
+    weights = -1
     call find_optimal_route( &
     distances(1:num_cities, 1:num_cities), &
     num_candidates, num_bred, mutation_chance, generations, routes, weights)
@@ -220,11 +219,11 @@ subroutine breed_statistics(repeat)
         if ( 0 == id ) then
             
             do i = 1, ntasks-1
-                
+                recv_stats = -1
                 call mpi_recv( &
                 recv_stats, &
                 size(recv_stats), &
-                MPI_REAL, i, tag, &
+                mpi_r, int(i, kind=4), tag, &
                 MPI_COMM_WORLD, status, rc&
                 )
 
@@ -251,10 +250,17 @@ subroutine breed_statistics(repeat)
             print *, "max", sum(stats(3,:))/size(stats(3,:))
             print *, "time", sum(stats(4,:))/size(stats(4,:))
 
+            ! getting stuff for latex tables
+            print "(5(f8.2,a))", sum(stats(1,:))/size(stats(1,:)), " & ",&
+            sum(stats(5,:))/size(stats(5,:)), " & ",&
+            sum(stats(2,:))/size(stats(2,:)), " & ",&
+            sum(stats(3,:))/size(stats(3,:)), " & ",&
+            sum(stats(4,:))/size(stats(4,:)), ""
+
         else
 
             call mpi_send( &
-            stats, size(stats), MPI_REAL, &
+            stats, size(stats), mpi_r, &
             0, tag, MPI_COMM_WORLD, rc &
             )
 
@@ -270,6 +276,13 @@ subroutine breed_statistics(repeat)
     print *, "mean", sum(stats(2,:))/size(stats(2,:))
     print *, "max", sum(stats(3,:))/size(stats(3,:))
     print *, "time", sum(stats(4,:))/size(stats(4,:))
+
+    ! getting stuff for latex tables
+    print "(5(f8.2,a))", sum(stats(1,:))/size(stats(1,:)), " & ",&
+        sum(stats(5,:))/size(stats(5,:)), " & ",&
+        sum(stats(2,:))/size(stats(2,:)), " & ",&
+        sum(stats(3,:))/size(stats(3,:)), " & ",&
+        sum(stats(4,:))/size(stats(4,:)), ""
 
 end subroutine breed_statistics
 
@@ -401,24 +414,24 @@ subroutine parallel_find_optimal_route( &
                 call mpi_recv( &
                 candidates(:, 1:num_migrators), &
                 size(candidates(:, 1:num_migrators)), &
-                MPI_INTEGER, modulo(id-1,ntasks), tag, &
+                mpi_i, modulo(id-1,ntasks), tag, &
                 MPI_COMM_WORLD, status, rc&
                 )
 
                 call mpi_send( &
-                migrators, size(migrators), MPI_INTEGER, &
+                migrators, size(migrators), mpi_i, &
                 modulo(id+1,ntasks), tag, MPI_COMM_WORLD, rc &
                 )
             else
                 call mpi_send( &
-                migrators, size(migrators), MPI_INTEGER, &
+                migrators, size(migrators), mpi_i, &
                 modulo(id+1,ntasks), tag, MPI_COMM_WORLD, rc &
                 )
 
                 call mpi_recv( &
                 candidates(:, 1:num_migrators), &
                 size(candidates(:, 1:num_migrators)), &
-                MPI_INTEGER, modulo(id-1,ntasks), tag, &
+                mpi_i, modulo(id-1,ntasks), tag, &
                 MPI_COMM_WORLD, status, rc&
                 )
             end if

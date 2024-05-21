@@ -5,9 +5,9 @@ program tsp_ga
     implicit none
 
 
-    integer :: io, i, iostat, num_cities, num_considered, generations, &
+    integer(kind=int_kind) :: io, i, iostat, num_cities, num_considered, generations, &
         t0, t1, clock_rate, idx, ia, num_bred, num_candidates
-    integer, allocatable :: routes(:,:)
+    integer(kind=int_kind), allocatable :: routes(:,:)
 
     real(kind=real_kind) :: shortest_distance, mutation_chance
     real(kind=real_kind), allocatable :: random_val(:), weights(:), &
@@ -75,7 +75,7 @@ program tsp_ga
 
     allocate(routes(num_cities, generations))
 
-    ! call breed_statistics(10)
+    ! call breed_statistics(int(10, int_kind))
     ! stop
 
     call find_optimal_route(distances, num_candidates, num_bred, mutation_chance, generations, routes, weights)
@@ -176,6 +176,13 @@ contains
         print *, "mean", sum(stats(2,:))/size(stats(2,:))
         print *, "max", sum(stats(3,:))/size(stats(3,:))
         print *, "time", sum(stats(4,:))/size(stats(4,:))
+
+        ! getting stuff for latex tables
+        print "(5(f8.2,a))", sum(stats(1,:))/size(stats(1,:)), " & ",&
+        sum(stats(5,:))/size(stats(5,:)), " & ",&
+        sum(stats(2,:))/size(stats(2,:)), " & ",&
+        sum(stats(3,:))/size(stats(3,:)), " & ",&
+        sum(stats(4,:))/size(stats(4,:)), ""
 
     end subroutine breed_statistics
     
