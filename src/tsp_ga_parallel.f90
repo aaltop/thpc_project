@@ -125,10 +125,12 @@ program tsp_ga
     ! call mpi_finalize(rc)
     ! stop
 
+    ! the algorithm run itself
     call parallel_find_optimal_route( &
     distances, &
     num_candidates, num_bred, mutation_chance, generations, num_migrators, migration_freq, routes, weights)
 
+    ! print time taken
     call system_clock(t1)
     print '(a,x,g0,x,g16.8,a)', 'Wall clock time for process', id, real(t1-t0,real_kind)/clock_rate, ' seconds'
 
@@ -144,7 +146,6 @@ program tsp_ga
     end do
     close(io)
 
-    ! write(*, "(a,g0,a)", advance="no") "Best route in process ", id, ": "
     print *, "Best route of distance", weights(minloc(weights)), "in process", id, ":", routes(:,minloc(weights))
     ! ==========================================
 

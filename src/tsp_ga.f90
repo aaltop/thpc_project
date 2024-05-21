@@ -66,23 +66,20 @@ program tsp_ga
     close(io)
     ! ====================================================================
 
-    ! allocate(random_val(num_cities))
     allocate(weights(generations))
-
-    ! allocate(idx(generations))
-    ! call shuffle(weights, idx)
-
-
     allocate(routes(num_cities, generations))
 
     ! call breed_statistics(int(10, int_kind))
     ! stop
 
+    ! Run TSP-GA
+    ! ---------------------------------
     call find_optimal_route(distances, num_candidates, num_bred, mutation_chance, generations, routes, weights)
 
     call system_clock(t1)
     print '(a,g16.8,a)', 'Wall clock time: ',real(t1-t0,real_kind)/clock_rate,' seconds'
-    ! Calculate the distances gained from the breeding algorithm
+    
+    ! write best route and its distance to file for each generation
     io = 1234
     open(io, file="generated_data/breed.txt", status="replace", action="write")
     do i = 1, generations
@@ -96,6 +93,7 @@ program tsp_ga
     print *, routes(:,minloc(weights))
     print "(a)", "Route distance:"
     print *, weights(minloc(weights))
+    ! ================================================
 
     ! Do a random search
     io = 1234

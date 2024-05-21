@@ -143,6 +143,7 @@ function partner_permutations(num_candidates)
     do while (idx <= num_candidates*(num_candidates-1))
 
         n = modulo(i, num_candidates)+1
+        ! don't pair with self
         if (n == (i/num_candidates+1)) then
             i = i + 1
             cycle
@@ -166,6 +167,7 @@ subroutine mutate(route)
     integer(kind=int_kind) :: idx(size(route)-1)
     real(kind=real_kind) :: weights(size(route)-1)
 
+    ! pointless to switch in these cases
     if ( 1 == size(route) .or. 2 == size(route) .or. 3 == size(route) ) return
 
     ! NOTE: practically speaking, calling the shuffle is currently quite
