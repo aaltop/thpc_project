@@ -1,8 +1,4 @@
 
-
-.PHONY: all
-all: $(prog)
-
 .PHONY: run
 run: run_serial run_parallel
 
