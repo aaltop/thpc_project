@@ -6,13 +6,17 @@ salesman problem, both in serial and parallel form.
 # Instructions
 
 Due to the use of parallel algorithms, OpenMPI will be needed on the
-running system such that the `mpif90`compiler wrapper can be used for compilation and the `mpirun` command used for execution of parallel programs. The base Fortran compiler used in development (and which the mpif90 wraps) has been gfortran from the 9.4.0 GCC. The programs
+running system such that the `mpif90`compiler wrapper can be used 
+for compilation and the `mpirun` command used for execution of parallel 
+programs. The base Fortran compiler used in development 
+(and which the mpif90 wraps) has been gfortran from the 9.4.0 GCC. The programs
 have been developed on a Windows Subsystem for Linux 2 with Ubuntu 20.04.
 
 ## Compilation
 
 Refer further to the README in the src/ directory for compilation instructions.
-Should `make` be available, compilation can be easily performed from the top-level directory by running the command
+Should `make` be available, compilation can be easily performed from 
+the top-level directory by running the command
 
 > make
 
