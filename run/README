@@ -14,9 +14,9 @@ Alternatively, the serial program can be run by the shell script
 
 and the parallel program by running the shell script 
 
-> ./parallel.sh
+> ./parallel.sh i
 
-both of which are run by the `make run`. When running by either of these or `make run`, the arguments to the program can supplied using the text files `serial_args.txt` and `parallel_args.txt`. These should already contain usable example arguments. Multiple lines of arguments in the files will all be run consecutively.
+where `i` is the number of processes to run with. Both of these are run by the `make run`, the parallel one with two processes. When running by either of these or `make run`, the arguments to the program can supplied using the text files `serial_args.txt` and `parallel_args.txt`. These should already contain usable example arguments. Multiple lines of arguments in the files will all be run consecutively.
 
 Finally, the serial program can also be run
 by
