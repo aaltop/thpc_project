@@ -32,7 +32,10 @@ subroutine shuffle(weights, idx)
 
 end subroutine shuffle
 
-! from https://github.com/Astrokiwi/simple_fortran_argsort
+! ==================================================================
+! Licensed under the LGPL-3.0 https://www.gnu.org/licenses/lgpl-3.0.html
+! from https://github.com/Astrokiwi/simple_fortran_argsort (David Williamson)
+! ==================================================================
 ! sorts in descending order
 subroutine merge_argsort(r,d)
     implicit none
